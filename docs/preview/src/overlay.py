@@ -3,14 +3,30 @@ and again at runtime after Framer hydrates (Framer repaints its own text otherwi
 import re, html, json, urllib.parse, pathlib
 import os
 ROOT = pathlib.Path(__file__).parent
-import sys
+import sys, subprocess, shutil
+PAGES = ['home', 'contact', 'privacy', 'terms', 'messaging']
 PAGE = sys.argv[1] if len(sys.argv) > 1 else 'home'
-SRC = {'home': 'mirror.html', 'contact': 'mirror-contact.html'}[PAGE]
-OUT = {'home': 'v1.html', 'contact': 'contact.html'}[PAGE]
-TITLE = {'home': 'Soba - Revenue solutions for produce companies', 'contact': 'Contact - Soba'}[PAGE]
-OGTITLE = {'home': 'Soba. Your sales desk now answers 24/7', 'contact': 'Contact Soba'}[PAGE]
-CANON = {'home': 'https://usesoba.com/', 'contact': 'https://usesoba.com/contact'}[PAGE]
+if PAGE == 'all':
+    for pg in PAGES: subprocess.run([sys.executable, __file__, pg], check=True)
+    sys.exit(0)
+LEGAL = PAGE in ('privacy', 'terms', 'messaging')
+SRC = 'mirror.html' if PAGE == 'home' else 'mirror-contact.html'
+OUT = {'home': 'v1.html', 'contact': 'contact.html'}.get(PAGE, PAGE + '.html')
+SITE = ROOT.parent.parent  # docs/
+DEPLOY = SITE/('index.html' if PAGE == 'home' else OUT)
 h = (ROOT/SRC).read_text(encoding="utf-8")
+LEGAL_HTML = LEGAL_H1 = LEGAL_DATE = LEGAL_DESC = None
+if LEGAL:
+    lsrc = (SITE/'src'/(PAGE + '.html')).read_text(encoding='utf-8')
+    LEGAL_DESC = re.search(r'<meta name="description" content="([^"]*)"', lsrc).group(1)
+    LEGAL_H1 = re.search(r'<h1>(.*?)</h1>', lsrc, re.S).group(1).strip()
+    LEGAL_DATE = re.search(r'<p class="muted">(.*?)</p>', lsrc, re.S).group(1).strip()
+    body = lsrc[lsrc.find('</p>', lsrc.find('<p class="muted">')) + 4:]
+    body = body[:body.rfind('</main>')] if '</main>' in body else body
+    LEGAL_HTML = body.strip()
+TITLE = {'home': 'Soba - Revenue solutions for produce companies', 'contact': 'Contact - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
+OGTITLE = {'home': 'Soba. Your sales desk now answers 24/7', 'contact': 'Contact Soba'}.get(PAGE, TITLE)
+CANON = 'https://usesoba.com/' + ('' if PAGE == 'home' else PAGE)
 
 CONTACT_MAP = [
  ("Start the conversation. We're ready to help.", "Tell us about your desk."),
@@ -121,6 +137,7 @@ MAP = [
  ("Nexura", "soba"),
 ]
 if PAGE == 'contact': MAP = CONTACT_MAP + MAP
+if LEGAL: MAP = [("Contact", "Legal"), ("Start the conversation. We're ready to help.", LEGAL_H1), ("Let's talk about what intelligent automation can do for your business. Tell us where you're at and we'll figure out the rest.", LEGAL_DATE)] + CONTACT_MAP + MAP
 MAP = [(a, b) for a, b in MAP if a != b]
 
 # ---- HTML pre-pass (first paint)
@@ -227,6 +244,11 @@ while True:
     pos = i + 10
 print("cta buttons retitled:", kc)
 style += '<style id="soba-css">' + (ROOT/'soba.css').read_text() + '</style>'
+if LEGAL:
+    style += '<style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style>'
+    style += '<template id="sb-legal-src">' + LEGAL_HTML + '</template>'
+    h = re.sub(r'(<(?:div|section)[^>]*data-framer-name="Form Section")', lambda m: '<section id="sb-legal" class="sb-legal">' + LEGAL_HTML + '</section>' + m.group(1), h, count=1)
+style += '<script defer src="/_vercel/insights/script.js"></script>'
 h = h.replace('</head>', style + '</head>', 1)
 script = '<script id="soba-page">window.SB_PAGE=%s;window.SB_TITLE=%s;</script>' % (json.dumps(PAGE), json.dumps(TITLE)) + script
 script += '<script id="soba-js">' + (ROOT/'soba.js').read_text() + '</script>'
@@ -243,7 +265,7 @@ h = re.sub(r'<title>.*?</title>', '<title>%s</title>' % TITLE, h, count=1)
 
 h = re.sub(r'mailto:\s*hello@nexura\.ai', 'mailto:hello@usesoba.com', h); h = re.sub(r'href="https://contra\.com/[^"]*"', 'href="/"', h).replace('tel:+18001234567', 'tel:+14808198035')
 # head: Soba metadata instead of the template's
-DESC = "Soba picks up your company line after close, takes the buyer's order in English or Spanish, and confirms it at the prices you set."
+DESC = LEGAL_DESC or "Soba picks up your company line after close, takes the buyer's order in English or Spanish, and confirms it at the prices you set."
 h = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="%s"><link rel="icon" href="/favicon.svg" type="image/svg+xml">' % CANON, h)
 h = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="%s">' % CANON, h)
 h = re.sub(r'<meta name="description" content="[^"]*">', '<meta name="description" content="%s">' % DESC, h)
@@ -256,4 +278,5 @@ h = re.sub(r'<meta property="og:image" content="[^"]*">', '<meta property="og:im
 h = re.sub(r'<meta name="twitter:image" content="[^"]*">', '<meta name="twitter:image" content="https://usesoba.com/img/og.jpg">', h)
 print("template refs left in head:", h[:h.find('</head>')].count('nexura'))
 (ROOT.parent/OUT).write_text(h, encoding="utf-8")
+shutil.copyfile(ROOT.parent/OUT, DEPLOY); print("deployed to", DEPLOY.name)
 print("bytes:", len(h))

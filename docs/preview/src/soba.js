@@ -64,7 +64,7 @@ function links(){
   const sec=(n,id)=>{const e=document.querySelector('[data-framer-name="'+n+'"]'); if(e&&!e.id) e.id=id;};
   sec('Feature Section','how'); sec('Demo Section','demo'); sec('Integration Section','setup'); sec('Solutions Section','solution');
   const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=window.SB_PAGE!=='contact'; const H=onHome?'':'/';
-  const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','Send an email':'mailto:hello@usesoba.com','Text us':'sms:+14808198035','Call us':'tel:+14808198035','Privacy':'/privacy.html','Terms':'/terms.html'};
+  const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','Send an email':'mailto:hello@usesoba.com','Text us':'sms:+14808198035','Call us':'tel:+14808198035','Privacy':'/privacy','Terms':'/terms'};
   document.querySelectorAll('a').forEach(a=>{ const t=a.textContent.replace(/\s+/g,' ').trim(); const key=Object.keys(MAPL).find(k=>t===k||t===k+' '+k||t===k+k); const href=a.getAttribute('href')||'';
     if(key){ if(a.getAttribute('href')!==MAPL[key]) a.setAttribute('href',MAPL[key]); if(/^https:/.test(MAPL[key])){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }
       if(!/^#/.test(MAPL[key]) && !a.dataset.sbx){ a.dataset.sbx='1'; a.addEventListener('click',ev=>{ ev.stopPropagation(); },true); } }
@@ -173,6 +173,8 @@ function footerCols(){
   const set=(sel,text)=>document.querySelectorAll(sel).forEach(c=>{ const p=c.querySelector('p'); if(p&&p.textContent.trim()!==text) p.textContent=text; });
   set('.framer-n611z5-container','Book a demo'); set('.framer-4pmyip-container','Contact us');
 }
+/* ---- legal pages: the article lives in a <template>; Framer's client render drops it, so put it back before the (hidden) form section ---- */
+function legal(){ const tpl=document.getElementById('sb-legal-src'); if(!tpl||document.getElementById('sb-legal')) return; const fs=document.querySelector('[data-framer-name="Form Section"]'); if(!fs) return; const sec=document.createElement('section'); sec.id='sb-legal'; sec.className='sb-legal'; sec.innerHTML=tpl.innerHTML; fs.parentNode.insertBefore(sec, fs); }
 /* ---- contact cards: the third card gets a second link, Call us ---- */
 function contactCards(){
   document.querySelectorAll('a').forEach(a=>{ if(a.textContent.trim()!=='Text us'||a.parentElement.querySelector('.sb-call')) return;
@@ -196,7 +198,7 @@ function contactForm(){
     else { if(btn){ btn.disabled=false; btn.style.opacity=''; } location.href='mailto:hello@usesoba.com?subject='+encodeURIComponent('Soba: '+data.name)+'&body='+encodeURIComponent([data.name,data.email,data.kind,data.orders,'',data.message].join('\n')); }
   },true);
 }
-function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
+function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
 window.sobaLayer=all;
 /* Framer 'appear' sometimes never fires for a variant (seen on the contact page's phone layout): after load, reveal anything still at its pre-animation opacity inside the viewport. Below-the-fold scroll reveals stay as they are. */
 function appearFallback(){ document.querySelectorAll('[style*="opacity: 0.001"],[style*="opacity:0.001"]').forEach(e=>{ const r=e.getBoundingClientRect(); if(r.bottom>0&&r.top<innerHeight&&r.width>0&&parseFloat(getComputedStyle(e).opacity)<0.01){ e.style.opacity='1'; e.style.transform='none'; } }); }

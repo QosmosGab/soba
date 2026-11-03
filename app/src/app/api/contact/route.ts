@@ -5,8 +5,7 @@ import { env } from "@/lib/env";
 
 const ORIGINS = new Set(["https://usesoba.com", "https://www.usesoba.com", "http://localhost:4319"]);
 const INBOX = "hello@usesoba.com";
-/** The site domain is not verified in Resend yet, so this goes out from Resend's shared sender. */
-const FROM = "Soba site <onboarding@resend.dev>";
+const FROM = "Soba <hello@usesoba.com>";
 
 function cors(req: Request) {
   const o = req.headers.get("origin") ?? "";
