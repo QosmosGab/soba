@@ -277,6 +277,16 @@ h = re.sub(r'<meta name="twitter:description" content="[^"]*">', '<meta name="tw
 h = re.sub(r'<meta property="og:image" content="[^"]*">', '<meta property="og:image" content="https://usesoba.com/img/og.jpg">', h)
 h = re.sub(r'<meta name="twitter:image" content="[^"]*">', '<meta name="twitter:image" content="https://usesoba.com/img/og.jpg">', h)
 print("template refs left in head:", h[:h.find('</head>')].count('nexura'))
+# booking buttons carry the Soba link in the HTML itself, not only after soba.js runs
+CAL = 'https://calendar.app.google/pWPid79eAXuna1nh8'
+def _bake_cal(m):
+    tag, inner = m.group(1), m.group(2)
+    text = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', inner)).strip()
+    if text in ('Book a demo', 'Pick a time'):
+        tag = re.sub(r'href="[^"]*"', 'href="%s"' % CAL, tag) if 'href="' in tag else tag.replace('<a ', '<a href="%s" ' % CAL, 1)
+    return tag + inner + '</a>'
+h = re.sub(r'(<a\b[^>]*>)(.*?)</a>', _bake_cal, h, flags=re.S)
+print("booking links baked:", h.count('href="%s"' % CAL))
 (ROOT.parent/OUT).write_text(h, encoding="utf-8")
 shutil.copyfile(ROOT.parent/OUT, DEPLOY); print("deployed to", DEPLOY.name)
 print("bytes:", len(h))
