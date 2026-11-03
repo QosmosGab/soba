@@ -3,13 +3,13 @@
 import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { adminTokenOk, isAdmin, setAdminSession } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { createCustomer, setStatus, rotateToken, addLine } from "./actions";
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ key?: string }> }) {
   const { key } = await searchParams;
-  if (key && adminTokenOk(key)) { await setAdminSession(); redirect("/admin"); }
+  if (key) redirect(`/admin/login?key=${encodeURIComponent(key)}`);
   if (!(await isAdmin())) return <main className="login"><div className="card"><h2>Soba admin</h2><p className="muted">Open /admin?key=&lt;ADMIN_TOKEN&gt; to sign in.</p></div></main>;
   const db = await getDb();
   const customers = await db.select().from(schema.customers).orderBy(desc(schema.customers.createdAt));
