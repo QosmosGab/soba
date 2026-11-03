@@ -196,10 +196,10 @@ script = '''<script id="soba-runtime">(function(){
 const MAP=%s;
 const norm=s=>s.replace(/\\s+/g,' ').replace(/ ([,.!?;:])/g,'$1').trim();
 let busy=false, obs;
-function run(){ if(busy) return; busy=true; if(obs) obs.disconnect();
+function scope(recs){ if(!recs||!recs.length) return [document.body]; const set=new Set(); for(const r of recs){ let t=r.target; if(t.nodeType===3) t=t.parentNode; if(t&&t.nodeType===1) set.add(t); } const roots=[...set].filter(a=>![...set].some(b=>b!==a&&b.contains(a))); return roots.length?roots:[document.body]; }
+function run(recs){ if(busy) return; busy=true; if(obs) obs.disconnect();
   try{
-    const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentNode;if(!p||p.nodeName==='SCRIPT'||p.nodeName==='STYLE'||!n.nodeValue.trim())return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT}});
-    const nodes=[]; while(w.nextNode()) nodes.push(w.currentNode);
+    const nodes=[]; for(const root of scope(recs)){ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentNode;if(!p||p.nodeName==='SCRIPT'||p.nodeName==='STYLE'||!n.nodeValue.trim())return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT}}); while(w.nextNode()) nodes.push(w.currentNode); }
     for(const [old,nw] of MAP){ const o=norm(old), oc=o.replace(/ /g,''); const maxlen=Math.max(o.split(' ').length+2, oc.length+2);
       for(let j=0;j<nodes.length;j++){ if(!nodes[j].nodeValue.trim()) continue;
         for(let L=1;L<=Math.min(maxlen,nodes.length-j);L++){ const seg=[]; for(let k=0;k<L;k++) seg.push(nodes[j+k].nodeValue);
@@ -214,7 +214,7 @@ function run(){ if(busy) return; busy=true; if(obs) obs.disconnect();
   } finally { busy=false; if(obs) obs.observe(document.body,{childList:true,subtree:true,characterData:true}); }
 }
 // Synchronous on purpose: Framer's bundle fails hydration (our copy differs from its props) and client-renders the whole template; the observer callback runs in the microtask before the browser paints, so the template DOM is never shown.
-obs=new MutationObserver(()=>run());
+obs=new MutationObserver(recs=>run(recs));
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{run();}); else run();
 window.addEventListener('load',()=>{run(); setTimeout(run,800); setTimeout(run,2500)});
 })();</script>''' % json.dumps(MAP, ensure_ascii=False)
