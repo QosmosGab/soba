@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
-import { panelCustomer } from "@/lib/auth";
+import { panelCustomer, clearPanelSession } from "@/lib/auth";
 import { handleRepMessage } from "@/lib/decisions";
 import { panelActor } from "@/lib/panel-data";
 import { parsePriceSheet, stagePriceSheet, answerSheetReadBack, applyRuleCommand, goLive, defaultExpiry } from "@/lib/rules";
@@ -24,6 +24,24 @@ async function ctx() {
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const num = (f: FormData, k: string) => { const v = Number(str(f, k)); return Number.isFinite(v) && str(f, k) !== "" ? v : null; };
 const on = (f: FormData, k: string) => f.get(k) === "on" || f.get(k) === "true" || f.get(k) === "1";
+
+// ---- Session ----
+
+export async function signOut() {
+  await clearPanelSession();
+  redirect("/");
+}
+
+/** The header's Live / Pause menu. Sets a value rather than flipping, so a stale menu can't undo a fresh change. */
+export async function setAnswering(form: FormData) {
+  const { customer, db } = await ctx();
+  const value = on(form, "value");
+  const [s] = await db.select().from(schema.settings).where(eq(schema.settings.customerId, customer.id));
+  if (s.answering === value) return;
+  await db.update(schema.settings).set({ answering: value }).where(eq(schema.settings.customerId, customer.id));
+  await db.insert(schema.events).values({ customerId: customer.id, type: "settings.changed", payload: { key: "answering", value, via: "panel" } });
+  revalidatePath("/panel", "layout");
+}
 
 // ---- Requests ----
 

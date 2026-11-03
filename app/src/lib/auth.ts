@@ -16,6 +16,10 @@ export async function setPanelSession(customerId: string) {
   (await cookies()).set(COOKIE, `${customerId}.${sign(customerId)}`, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 90, secure: process.env.NODE_ENV === "production" });
 }
 
+export async function clearPanelSession() {
+  (await cookies()).delete(COOKIE);
+}
+
 /** The signed-in customer, or null. */
 export async function panelCustomer() {
   const v = (await cookies()).get(COOKIE)?.value;

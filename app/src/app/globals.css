@@ -31,16 +31,34 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .brand{display:flex;align-items:center;gap:8px;font-family:var(--brand);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-.01em;line-height:1}
 .mark{width:26px;height:26px;display:grid;place-items:center;flex:none}
 .mark svg{display:block}
-.co{font-family:var(--body);color:var(--muted);font-weight:500;font-size:13.5px;letter-spacing:-.01em;margin-left:6px;padding-left:12px;border-left:1px solid var(--line);line-height:1.2}
 .tabs{display:flex;gap:4px}
 .tab{padding:8px 12px;border-radius:999px;font-weight:500;font-size:14px;color:var(--muted);transition:color .2s,background .2s}
 .tab:hover{color:var(--ink);background:var(--sunk)}
 .tab[aria-selected="true"]{color:var(--ink);font-weight:600}
 .grow{flex:1}
-.pillstat{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;border-radius:999px;padding:7px 13px;background:var(--surface);border:1px solid var(--line);color:var(--text)}
+.pillstat{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;border-radius:999px;padding:7px 13px;background:var(--surface);border:1px solid var(--line);color:var(--text);cursor:pointer;font-family:inherit;transition:background .2s,border-color .2s}
+.pillstat:hover{background:var(--sunk);border-color:#d5d5d5}
 .pillstat.off{color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.pillstat .chev{width:14px;height:14px;color:var(--muted);margin-right:-3px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
 .pillstat.off .dot{background:#c9c9c9}
+.status{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 8px);min-width:250px;white-space:nowrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:6px;z-index:20}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border-radius:10px;font:inherit;font-size:14px;font-weight:500;color:var(--text);background:none;border:0;cursor:pointer}
+.menu button:hover{background:var(--sunk)}
+.menu button[aria-checked="true"]{color:var(--ink);font-weight:600}
+.menu button .dot{background:#c9c9c9}
+.menu button.live .dot{background:var(--accent)}
+.menu button .tick{margin-left:auto;width:14px;height:14px;color:var(--ink)}
+.menu small{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:1px}
+.who{display:flex;align-items:center;gap:12px;padding-left:16px;border-left:1px solid var(--line)}
+.who-name{font-size:13.5px;font-weight:500;color:var(--text);letter-spacing:-.01em;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+dialog.confirm{border:1px solid var(--line);border-radius:16px;padding:24px 26px;max-width:380px;width:calc(100% - 32px);background:var(--surface);box-shadow:0 20px 60px rgba(0,0,0,.12);color:var(--text)}
+dialog.confirm::backdrop{background:rgba(11,26,43,.28)}
+dialog.confirm h3{font-size:20px;font-weight:500;letter-spacing:-.02em;margin:0 0 8px}
+dialog.confirm p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+dialog.confirm .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+@media (max-width:720px){.who{padding-left:0;border-left:0}.who-name{display:none}}
 .page{max-width:1257px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:24px 70px;display:flex;flex-direction:column;gap:18px}
 /* cards */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow);min-width:0}
