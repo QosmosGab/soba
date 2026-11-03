@@ -606,6 +606,20 @@ label.framer-68cn0z,label.framer-23uauw{display:none!important}
 [data-framer-name="Integration Section"] [data-framer-name="Number"]{margin-top:3px}
 .sb-hub{border:1px solid #0B1A2B;box-sizing:border-box}
 }
+/* pass 13: phone feedback (dividers, gaps, footer rails, title hierarchy) */
+@media(max-width:700px){
+[data-framer-name="Integration Section"] [data-framer-name="Divider"]{display:none!important}
+.framer-2mc3ra-container [data-framer-name="BG Line"],.framer-2mc3ra-container [data-framer-name="Pattern"]{display:none!important}
+.framer-tof4td-container{padding:14px 10px 0;background:#fff}
+h2.framer-text,.sb-feat .head h2{font-size:34px!important;line-height:1.12!important;text-align:left!important}
+[data-framer-name="Solutions Section"] [data-framer-name="Center"]{align-items:flex-start!important}
+[data-framer-name="Solutions Section"] [data-framer-name="Center"] .framer-text{text-align:left!important}
+.sb-row h3{font-size:26px!important;letter-spacing:-.6px;margin:0 0 10px}
+.sb-row p{font-size:17px}
+.sb-rows{margin-top:-28px;padding:0}
+.sb-rows .right{gap:52px}
+.sb-row{gap:18px}
+}
 </style><style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style><template id="sb-legal-src"><p class="sb-404"><a href="/">Back to the home page</a><span>&middot;</span><a href="/contact">Contact us</a></p></template><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="robots" content="noindex"><script defer src="/_vercel/insights/script.js"></script></head>
 <body>
 	<script async src="https://events.framer.com/script?v=2" data-fid="3d58e3fe0f86490d50175929f54e5fb51a4769e67529d30864ef8c9180f4db86" data-no-nt></script>
@@ -865,7 +879,9 @@ function contactForm(){
   },true);
 }
 function icons(){ document.querySelectorAll('link[rel="icon"][href*="framerusercontent"],link[rel="apple-touch-icon"][href*="framerusercontent"]').forEach(l=>l.remove()); }
-function all(){ try{ icons(); heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
+/* phone: the dotted line between the Solutions section and the CTA reads as a box; hide the Solutions section's bottom line */
+function phoneLines(){ if(!matchMedia('(max-width:700px)').matches) return; const sec=document.querySelector('[data-framer-name="Solutions Section"]'); if(!sec) return; const ls=[...sec.querySelectorAll('[data-framer-name="BG Line"]')].filter(e=>e.getBoundingClientRect().width>0); if(ls.length<2) return; ls.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top); ls[ls.length-1].style.display='none'; }
+function all(){ try{ phoneLines(); icons(); heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
 window.sobaLayer=all;
 /* Framer 'appear' sometimes never fires for a variant (seen on the contact page's phone layout): after load, reveal anything still at its pre-animation opacity inside the viewport. Below-the-fold scroll reveals stay as they are. */
 function appearFallback(){ document.querySelectorAll('[style*="opacity: 0.001"],[style*="opacity:0.001"]').forEach(e=>{ const r=e.getBoundingClientRect(); if(r.bottom>0&&r.top<innerHeight&&r.width>0&&parseFloat(getComputedStyle(e).opacity)<0.01){ e.style.opacity='1'; e.style.transform='none'; } }); }
