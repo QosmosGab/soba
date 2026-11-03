@@ -25,6 +25,7 @@ export const customers = pgTable("customers", {
   timezone: text().notNull().default("America/Phoenix"),
   status: text().notNull().default("setup"), // setup | live | paused
   plan: text().notNull().default("pilot"),
+  panelToken: text(),                  // secret in the panel login link
   createdAt: ts().notNull().defaultNow(),
 });
 
@@ -54,6 +55,12 @@ export const settings = pgTable("settings", {
   retentionMonths: integer().notNull().default(12),
   implausiblePricePct: integer().notNull().default(30),
   everyoneGetsCards: boolean().notNull().default(false),
+  samePricesPromptTime: text().notNull().default("17:30"), // local HH:MM, nightly "same prices as last night?"
+  escalationMinutes: integer().notNull().default(10),      // no reply on a card → next rep
+  blockedNumbers: jsonb().$type<string[]>().notNull().default([]),
+  testNumbers: jsonb().$type<string[]>().notNull().default([]),
+  urgentRing: boolean().notNull().default(true),
+  textFirstBeforeCall: boolean().notNull().default(false), // "Del Campo calling you back…" text before the callback
 });
 
 export const lines = pgTable("lines", {
@@ -67,6 +74,8 @@ export const lines = pgTable("lines", {
   lastForwardingTestAt: ts(),
   lastForwardingTestOk: boolean(),
   backupNumber: text(),
+  elevenAgentId: text(),            // ElevenLabs agent that answers this line
+  elevenPhoneNumberId: text(),      // ElevenLabs phone number id (Twilio import) for outbound callbacks
 }, (t) => [uniqueIndex("lines_twilio_number").on(t.twilioNumber)]);
 
 export const teamMembers = pgTable("team_members", {
@@ -81,8 +90,32 @@ export const teamMembers = pgTable("team_members", {
   canEditSettings: boolean().notNull().default(false),
   isOrderClerk: boolean().notNull().default(false),
   isOnCall: boolean().notNull().default(false),
+  isOwner: boolean().notNull().default(false),        // default owner at opening
+  summaryWhatsapp: boolean().notNull().default(true),
+  summaryEmail: boolean().notNull().default(false),
   active: boolean().notNull().default(true),
-}, (t) => [index("team_members_customer").on(t.customerId)]);
+}, (t) => [index("team_members_customer").on(t.customerId), index("team_members_cell").on(t.cell)]);
+
+/** Where each rep's WhatsApp thread with the desk stands: which card is live and what we last asked. */
+export const repThreads = pgTable("rep_threads", {
+  memberId: uuid().primaryKey().references(() => teamMembers.id, { onDelete: "cascade" }),
+  requestId: uuid().references(() => requests.id, { onDelete: "set null" }),
+  state: text().notNull().default("idle"), // idle | awaiting_counter | awaiting_reason | awaiting_clarify | awaiting_sheet_ok | awaiting_same_prices
+  pendingSheetId: uuid(),
+  updatedAt: ts().notNull().defaultNow(),
+});
+
+/** A buyer's text conversation on the business text line, until it becomes a request. */
+export const buyerThreads = pgTable("buyer_threads", {
+  id: uuid().primaryKey().defaultRandom(),
+  customerId: uuid().notNull().references(() => customers.id, { onDelete: "cascade" }),
+  lineId: uuid().references(() => lines.id),
+  buyerPhone: text().notNull(),
+  state: text().notNull().default("open"), // open | done
+  requestId: uuid().references(() => requests.id, { onDelete: "set null" }),
+  startedAt: ts().notNull().defaultNow(),
+  lastAt: ts().notNull().defaultNow(),
+}, (t) => [index("buyer_threads_lookup").on(t.customerId, t.buyerPhone, t.state)]);
 
 export const coverage = pgTable("coverage", {
   id: serial().primaryKey(),
@@ -114,6 +147,10 @@ export const priceSheets = pgTable("price_sheets", {
   confirmedById: uuid().references(() => teamMembers.id),
   confirmedAt: ts(),
   rawText: text(),
+  parsed: jsonb().$type<Array<{ product: string; size: string | null; pack: string | null; minPrice: number; caseLimit: number; note?: string }>>(),
+  question: text(),                        // the one clarifying question, if the sheet was unclear
+  sentById: uuid().references(() => teamMembers.id),
+  createdAt: ts().notNull().defaultNow(),
 });
 
 export const priceRules = pgTable("price_rules", {
@@ -154,6 +191,9 @@ export const requests = pgTable("requests", {
   callbackPermission: boolean(),
   transcriptUrl: text(),
   providerConversationId: text(),
+  transcript: text(),                      // call notes or the text thread, plain text
+  isTest: boolean().notNull().default(false),
+  enteredAt: ts(),                         // rep marked the order entered in the ERP
 }, (t) => [uniqueIndex("requests_customer_ref").on(t.customerId, t.ref), index("requests_customer_received").on(t.customerId, t.receivedAt)]);
 
 export const orderLines = pgTable("order_lines", {
@@ -182,9 +222,11 @@ export const messages = pgTable("messages", {
   body: text(),
   buttonPayload: text(),
   providerId: text(),
+  threadId: uuid(),                        // buyer_threads.id for text intake
+  memberId: uuid(),                        // the rep, when party = rep
   sentAt: ts().notNull().defaultNow(),
   deliveredAt: ts(),
-}, (t) => [index("messages_request").on(t.requestId)]);
+}, (t) => [index("messages_request").on(t.requestId), index("messages_thread").on(t.threadId), uniqueIndex("messages_provider").on(t.providerId)]);
 
 export const decisions = pgTable("decisions", {
   id: uuid().primaryKey().defaultRandom(),
@@ -207,6 +249,11 @@ export const callbacks = pgTable("callbacks", {
   outcome: callbackOutcome().notNull().default("pending"),
   buyerYesAt: ts(),
   lastAttemptAt: ts(),
+  decisionId: uuid().references(() => decisions.id),
+  offerCases: integer(),
+  offerPrice: numeric({ precision: 10, scale: 2 }),
+  providerConversationId: text(),
+  notes: text(),
 });
 
 export const summaries = pgTable("summaries", {

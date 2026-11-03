@@ -73,6 +73,38 @@ export function requestCard(c: CardInput): string {
   return out.join("\n").trimEnd();
 }
 
+/**
+ * The same card as WhatsApp template variables. WhatsApp forbids newlines inside a
+ * variable, so the template holds the line structure and each field is one line:
+ *   {{1}}                      who
+ *   NEW REQUEST · ref {{2}} · {{3}}
+ *   {{4}}                      flags, or "—"
+ *   Product:  {{5}}  Size: {{6}}  Pack: {{7}}  Qty: {{8}}  Price: {{9}}  Pickup: {{10}}
+ *   Transcript: {{11}}
+ * Several order lines are joined with " | " inside each field.
+ */
+export function cardTemplateVariables(c: CardInput): Record<string, string> {
+  const one = (s: string) => s.replace(/\s*\n\s*/g, " · ").replace(/\s{2,}/g, " ").trim() || "—";
+  const who = [c.callerName, c.callerCompany ? `${c.callerCompany}${c.callerCity ? ` (${c.callerCity})` : ""}` : null, c.callbackNumber].filter(Boolean).join(" · ");
+  const flags = c.flags.map((f) => FLAG_WORDS[f] ?? f);
+  if (c.repeatTimes?.length) flags.push(`called ${c.repeatTimes.length + 1} times`);
+  const join = (f: (l: ResolvedLine) => string) => one(c.lines.map(f).filter(Boolean).join(" | "));
+  const isOrder = c.type === "new_order" && c.lines.length > 0;
+  return {
+    "1": one(who || "Unknown caller"),
+    "2": String(c.ref),
+    "3": one(`${c.channel}, ${fmtTime(c.receivedAt, c.timezone)}`),
+    "4": one(flags.join(" · ")),
+    "5": isOrder ? join((l) => `${l.productCanonical ?? l.product}${l.productCanonical ? "" : " (not on sheet)"}`) : one(c.summary),
+    "6": isOrder ? join((l) => l.size ?? "—") : "—",
+    "7": isOrder ? join((l) => l.pack ?? "—") : "—",
+    "8": isOrder ? join((l) => (l.cases != null ? `${l.cases} cases` : "not given")) : "—",
+    "9": isOrder ? join((l) => (l.priceOffered != null ? `offers ${fmtMoney(l.priceOffered)}/case` : "wants a quote")) : "—",
+    "10": isOrder ? join((l) => fmtPickup(l) || "—") : "—",
+    "11": one(c.transcriptUrl ?? "—"),
+  };
+}
+
 /** Which buttons the card carries. Non-orders get Take over only. */
 export function cardButtons(type: string): Array<"Approve" | "Counter" | "Reject" | "Take over"> {
   return type === "new_order" ? ["Approve", "Counter", "Reject", "Take over"] : ["Take over"];
