@@ -1,5 +1,6 @@
 // Internal admin: onboard a customer (settings, lines, first rep), hand out the
 // panel link, pause or go live. Gated by ADMIN_TOKEN (?key=… once, then a cookie).
+import { Clover } from "@/components/clover";
 import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 import { getDb, schema } from "@/db";
@@ -18,7 +19,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const counts = await db.select({ customerId: schema.requests.customerId, ref: schema.requests.ref }).from(schema.requests);
   return (
     <>
-      <header className="top"><div className="top-in"><div className="brand"><div className="mark">S</div>Soba <span className="co">admin</span></div></div></header>
+      <header className="top"><div className="top-in"><div className="brand"><span className="mark"><Clover /></span>soba <span className="co">admin</span></div></div></header>
       <main className="page">
         <section className="card"><h2>Customers</h2>
           <div className="tbl"><table><thead><tr><th>Customer</th><th>Status</th><th>Lines</th><th>Team</th><th>Requests</th><th>Panel link</th><th></th></tr></thead><tbody>

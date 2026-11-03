@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import { Inter, Quicksand } from "next/font/google";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({ variable: "--display", subsets: ["latin"], weight: ["500", "700"] });
-const body = Figtree({ variable: "--body", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+const quicksand = Quicksand({ variable: "--font-quicksand", subsets: ["latin"], weight: ["700"] });
 
 export const metadata: Metadata = { title: "Soba", description: "The after-hours sales desk for produce" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en" className={`${inter.variable} ${quicksand.variable}`}>
       <body>{children}</body>
     </html>
   );

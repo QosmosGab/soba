@@ -33,7 +33,7 @@ export default async function Performance({ searchParams }: { searchParams: Prom
         <div>
           <div className="seg" role="group" aria-label="Range"><Link href={q({ range: "week" })} aria-pressed={range === "week"} role="button" style={{ textDecoration: "none" }}>This week</Link><Link href={q({ range: "month" })} aria-pressed={range === "month"} role="button" style={{ textDecoration: "none" }}>This month</Link></div>
           <div className="big">{$(p.booked)}</div>
-          <div style={{ color: "var(--accent-deep)", marginTop: 8 }}>booked through Soba · {p.orders} order{p.orders === 1 ? "" : "s"}</div>
+          <div className="sub" style={{ marginTop: 8 }}>booked through Soba · {p.orders} order{p.orders === 1 ? "" : "s"}</div>
           <div className="split"><div><b>{$(p.recovered)}</b>closed by the desk</div><div><b>{$(p.assisted)}</b>won after a rep took over</div></div>
         </div>
         <div>

@@ -23,7 +23,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
       <section className="hero"><div>
         <div className="muted small">{t(s.windowStart)} to {t(s.windowEnd)}</div>
         <div className="big">{$(s.won)}</div>
-        <div style={{ color: "var(--accent-deep)", marginTop: 8 }}>won overnight · {s.wonCount} order{s.wonCount === 1 ? "" : "s"} · this week {$(s.weekTotal)} from {s.weekOrders}</div>
+        <div className="sub" style={{ marginTop: 8 }}>won overnight · {s.wonCount} order{s.wonCount === 1 ? "" : "s"} · this week {$(s.weekTotal)} from {s.weekOrders}</div>
       </div></section>
       <section className="card"><h2>Overnight orders</h2>
         <div className="tbl"><table><thead><tr><th>Buyer</th><th>Product</th><th className="r">Cases</th><th className="r">Price</th><th className="r">Amount</th><th className="r">Status</th></tr></thead><tbody>

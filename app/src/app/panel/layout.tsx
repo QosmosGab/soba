@@ -1,3 +1,4 @@
+import { Clover } from "@/components/clover";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
@@ -16,7 +17,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <>
       <header className="top"><div className="top-in">
-        <Link href="/panel" className="brand" style={{ textDecoration: "none" }}><div className="mark">S</div>Soba <span className="co">{customer.name}</span></Link>
+        <Link href="/panel" className="brand" style={{ textDecoration: "none" }}><span className="mark"><Clover /></span>soba <span className="co">{customer.name}</span></Link>
         <Tabs />
         <div className="grow" />
         <span className={"pillstat" + (answering ? "" : " off")}><span className="dot" />{answering ? (linesOk ? "Answering · lines working" : "Answering · forwarding check failed") : "Paused tonight"}</span>
