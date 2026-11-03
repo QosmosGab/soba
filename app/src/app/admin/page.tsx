@@ -6,7 +6,7 @@ import { desc } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { isAdmin } from "@/lib/auth";
 import { env } from "@/lib/env";
-import { createCustomer, setStatus, rotateToken, addLine } from "./actions";
+import { createCustomer, setStatus, rotateToken, addLine, addDemoData } from "./actions";
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ key?: string }> }) {
   const { key } = await searchParams;
@@ -32,7 +32,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                 <td className="small">{members.filter((m) => m.customerId === c.id).map((m) => <div key={m.id}>{m.name} {m.cell}{m.whatsappOptedIn ? " ✓" : ""}</div>)}</td>
                 <td>{counts.filter((r) => r.customerId === c.id).length}</td>
                 <td className="small">{c.panelToken ? <code>{env.appUrl}/p/{c.panelToken}</code> : "none"}<form action={rotateToken} style={{ marginTop: 4 }}><input type="hidden" name="customerId" value={c.id} /><button className="btn ghost sm">New link</button></form></td>
-                <td><form action={setStatus} className="row"><input type="hidden" name="customerId" value={c.id} /><button className="btn sm" name="status" value={c.status === "live" ? "paused" : "live"}>{c.status === "live" ? "Pause" : "Go live"}</button></form></td>
+                <td><div className="row" style={{ flexWrap: "wrap" }}><form action={setStatus}><input type="hidden" name="customerId" value={c.id} /><button className="btn sm" name="status" value={c.status === "live" ? "paused" : "live"}>{c.status === "live" ? "Pause" : "Go live"}</button></form><form action={addDemoData}><input type="hidden" name="customerId" value={c.id} /><button className="btn ghost sm" title="Two nights of made-up traffic so the panel can be shown; does nothing twice">Add demo data</button></form></div></td>
               </tr>
             ))}
           </tbody></table></div>

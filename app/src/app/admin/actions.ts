@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
 import { isAdmin, newToken } from "@/lib/auth";
 import { provisionCustomer } from "@/lib/provision";
+import { seedDemo } from "@/lib/demo";
 import { toE164 } from "@/lib/requests";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -34,5 +35,11 @@ export async function addLine(form: FormData) {
   const n = toE164(str(form, "twilioNumber"));
   if (!n) return;
   await db.insert(schema.lines).values({ customerId: str(form, "customerId"), kind: str(form, "kind") === "text" ? "text" : "voice", twilioNumber: n, companyNumber: toE164(str(form, "companyNumber")), elevenAgentId: str(form, "elevenAgentId") || null, elevenPhoneNumberId: str(form, "elevenPhoneNumberId") || null });
+  revalidatePath("/admin");
+}
+
+export async function addDemoData(form: FormData) {
+  const db = await guard();
+  await seedDemo(db, str(form, "customerId"));
   revalidatePath("/admin");
 }
