@@ -618,8 +618,8 @@ function run(){ if(busy) return; busy=true; if(obs) obs.disconnect();
     [...document.querySelectorAll('a')].filter(a=>a.textContent.trim()==='Pricing').forEach(a=>{(a.closest('[class*="-container"]')||a).style.display='none'});
   } finally { busy=false; if(obs) obs.observe(document.body,{childList:true,subtree:true,characterData:true}); }
 }
-let t; const schedule=()=>{clearTimeout(t); t=setTimeout(run,60)};
-obs=new MutationObserver(schedule);
+// Synchronous on purpose: Framer's bundle fails hydration (our copy differs from its props) and client-renders the whole template; the observer callback runs in the microtask before the browser paints, so the template DOM is never shown.
+obs=new MutationObserver(()=>run());
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>{run();}); else run();
 window.addEventListener('load',()=>{run(); setTimeout(run,800); setTimeout(run,2500)});
 })();</script><script id="soba-js">/* Soba layer: custom pieces injected after Framer hydrates. Everything is idempotent (keyed by id). */
