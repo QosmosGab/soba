@@ -59,12 +59,12 @@ function footer(){
     <a href="sms:+14808198035" title="Text 480 819 8035" aria-label="Text">${icon.sms}</a>
     <a href="tel:+14808198035" title="Call 480 819 8035" aria-label="Call">${icon.phone}</a></div>`));
 }
-function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*="epYjC31"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/hero.webp'; }); document.querySelectorAll('img[src*="Pai7r7Udk"],img[srcset*="Pai7r7Udk"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/cta.jpg?v=3'; }); }
+function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*="epYjC31"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/hero.webp'; }); document.querySelectorAll('img[src*="D8cPRFjF76"],img[srcset*="D8cPRFjF76"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/hero.webp'; }); document.querySelectorAll('img[src*="Pai7r7Udk"],img[srcset*="Pai7r7Udk"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/cta.jpg?v=3'; }); }
 function links(){
   const sec=(n,id)=>{const e=document.querySelector('[data-framer-name="'+n+'"]'); if(e&&!e.id) e.id=id;};
   sec('Feature Section','how'); sec('Demo Section','demo'); sec('Integration Section','setup'); sec('Solutions Section','solution');
   const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=window.SB_PAGE!=='contact'; const H=onHome?'':'/';
-  const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','hello@usesoba.com':'mailto:hello@usesoba.com','+1 (480) 819-8035':'tel:+14808198035','Privacy':'/privacy.html','Terms':'/terms.html'};
+  const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','Send an email':'mailto:hello@usesoba.com','Text us':'sms:+14808198035','Call us':'tel:+14808198035','Privacy':'/privacy.html','Terms':'/terms.html'};
   document.querySelectorAll('a').forEach(a=>{ const t=a.textContent.replace(/\s+/g,' ').trim(); const key=Object.keys(MAPL).find(k=>t===k||t===k+' '+k||t===k+k); const href=a.getAttribute('href')||'';
     if(key){ if(a.getAttribute('href')!==MAPL[key]) a.setAttribute('href',MAPL[key]); if(/^https:/.test(MAPL[key])){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }
       if(!/^#/.test(MAPL[key]) && !a.dataset.sbx){ a.dataset.sbx='1'; a.addEventListener('click',ev=>{ ev.stopPropagation(); },true); } }
@@ -173,6 +173,12 @@ function footerCols(){
   const set=(sel,text)=>document.querySelectorAll(sel).forEach(c=>{ const p=c.querySelector('p'); if(p&&p.textContent.trim()!==text) p.textContent=text; });
   set('.framer-n611z5-container','Book a demo'); set('.framer-4pmyip-container','Contact us');
 }
+/* ---- contact cards: the third card gets a second link, Call us ---- */
+function contactCards(){
+  document.querySelectorAll('a').forEach(a=>{ if(a.textContent.trim()!=='Text us'||a.parentElement.querySelector('.sb-call')) return;
+    const c=a.cloneNode(true); c.classList.add('sb-call'); c.setAttribute('href','tel:+14808198035'); delete c.dataset.sbx; c.textContent='Call us';
+    a.after(document.createTextNode('\u00a0\u00a0\u00b7\u00a0\u00a0'), c); });
+}
 /* ---- contact form: posts to the app, which mails hello@usesoba.com ---- */
 function contactForm(){
   const f=document.querySelector('form[data-framer-form]'); if(!f) return;
@@ -186,11 +192,11 @@ function contactForm(){
     if(!data.name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){ (data.name?f.querySelector('[name="Email"]'):f.querySelector('[name="Name"]')).focus(); return; }
     const btn=f.querySelector('button,input[type=submit]'); const label=btn&&btn.textContent; if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
     let ok=false; try{ const r=await fetch('https://app.usesoba.com/api/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)}); ok=r.ok; }catch(e){ ok=false; }
-    if(ok){ f.innerHTML='<div class="sb-sent"><b>Got it.</b> We reply within one business day. Faster if you text 480 819 8035.</div>'; }
+    if(ok){ f.innerHTML='<div class="sb-sent"><b>Got it.</b> We reply within one business day.</div>'; }
     else { if(btn){ btn.disabled=false; btn.style.opacity=''; } location.href='mailto:hello@usesoba.com?subject='+encodeURIComponent('Soba: '+data.name)+'&body='+encodeURIComponent([data.name,data.email,data.kind,data.orders,'',data.message].join('\n')); }
   },true);
 }
-function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
+function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
 window.sobaLayer=all;
 /* Framer 'appear' sometimes never fires for a variant (seen on the contact page's phone layout): after load, reveal anything still at its pre-animation opacity inside the viewport. Below-the-fold scroll reveals stay as they are. */
 function appearFallback(){ document.querySelectorAll('[style*="opacity: 0.001"],[style*="opacity:0.001"]').forEach(e=>{ const r=e.getBoundingClientRect(); if(r.bottom>0&&r.top<innerHeight&&r.width>0&&parseFloat(getComputedStyle(e).opacity)<0.01){ e.style.opacity='1'; e.style.transform='none'; } }); }

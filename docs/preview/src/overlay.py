@@ -20,25 +20,25 @@ CONTACT_MAP = [
  ("Marketing Agency", "Grower-shipper"), ("In-house Marketing Team", "Importer"), ("AI Consultant", "Wholesaler"), ("Startup Founder", "Distributor"),
  ("Where are you in your journey?", "How do after-hours orders reach you today?"),
  ("Just researching", "Voicemail and callbacks"), ("Evaluating tools / comparing options", "A rep's cell phone"), ("Already have a solution, looking to switch", "Text or WhatsApp"),
- ("Anything else you'd like us to know?", "Anything else?"),
+ ("Anything else you'd like us to know?", "Message"),
  ("Send message", "Send"),
  ("Got a question? We'll get back to you within 24 hours.", "Got a question? We reply within one business day."),
- ("hello@nexura.ai", "hello@usesoba.com"),
+ ("hello@nexura.ai", "Send an email"),
  ("Join the community", "Book a demo"),
  ("Stay up to date with product news, tips, and updates.", "Thirty minutes on a call, with your line and your price sheet."),
  ("Follow us on X", "Pick a time"),
  ("Talk to sales", "Text or call"),
  ("Prefer to talk it out? Our team is available Mon\u2013Fri, 9am\u20136pm.", "Prefer to talk it out? Text or call and a founder picks up."),
- ("+1 (800) 123-4567", "+1 (480) 819-8035"),
+ ("+1 (800) 123-4567", "Text us"),
  ("Can I switch plans or cancel anytime?", "Does Soba speak Spanish?"),
  ("Absolutely. All plans are flexible with no long-term contracts. You can upgrade, downgrade, or cancel at any time.",
   "Yes. It answers in whichever language the buyer uses, English or Spanish, and reads every number back before it confirms."),
  ("Do you offer custom or enterprise pricing?", "What happens when a buyer asks for a price below my sheet?"),
  ("Yes. If your team has specific needs, reach out via the form or book a call with sales and we'll put together a custom plan.",
   "Nothing gets confirmed. The request goes to your on-call rep on WhatsApp to approve, counter, reject or take over."),
- ("How quickly will I hear back after submitting the form?", "How quickly will I hear back?"),
+ ("How quickly will I hear back after submitting the form?", "How quickly do you answer clients?"),
  ("We typically respond within 1 business day. For urgent inquiries, feel free to email us directly.",
-  "Within one business day. Faster if you text."),
+  "Instantly. Soba answers the phone and replies to texts 24 hours a day, 7 days a week."),
  ("What kind of support is included with my plan?", "What do I need to set up?"),
  ("All plans include access to our help center and email support. Pro and Enterprise plans get priority support and a dedicated account manager.",
   "Forward your line after close or after four rings, and text or email tonight's price sheet. That's it."),
@@ -236,6 +236,8 @@ h = re.sub(r'srcset="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMs
 h = re.sub(r'src="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'src="img/hero.webp"', h)
 h = re.sub(r'srcset="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'srcset="img/cta.jpg?v=3 2400w"', h)
 h = re.sub(r'src="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'src="img/cta.jpg?v=3"', h)
+h = re.sub(r'srcset="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'srcset="img/hero.webp 2400w"', h)
+h = re.sub(r'src="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'src="img/hero.webp"', h)
 print("image refs left:", h.count('epYjC31PopakdO7OcpxMsWS2y0'), h.count('Pai7r7UdkYU5XAvtSCnRGv7lC8'))
 h = re.sub(r'<title>.*?</title>', '<title>%s</title>' % TITLE, h, count=1)
 

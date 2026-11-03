@@ -367,4 +367,5 @@ footer [data-framer-name="Footer Nav Links"]{align-items:flex-start!important}
 /* pass 8: nav Contact us, footer columns, phone menu, contact form */
 .framer-uw9lja-container,.framer-2jp9fh-container,.framer-fux8ea-container,.framer-1txej56,.framer-7rvtdn-container{display:none!important}
 .sb-sent{padding:28px 24px;border:1px solid #e6e6e6;border-radius:16px;background:#fff;font-size:17px;line-height:1.5;color:#0B1A2B}
-
+/* pass 9: contact page = name, email, message only */
+label.framer-68cn0z,label.framer-23uauw{display:none!important}
