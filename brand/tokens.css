@@ -1,0 +1,8 @@
+/* Soba brand tokens (picked 2 Nov 2026). Blue ground, white type, red accents. Mark: outline clover. Font: Quicksand. */
+:root{
+  --blue:#0099FF; --blue-deep:#0077CC; --blue-tint:#E6F4FF;
+  --white:#FDFDFE; --red:#F82705; --red-deep:#C91E03;
+  --ink:#0B1A2B; --mute-on-blue:rgba(253,253,254,.78); --mute-on-white:#5B6B7A;
+  --font-brand:"Quicksand",system-ui,sans-serif;
+  --font-body:"Inter",system-ui,sans-serif;
+}
