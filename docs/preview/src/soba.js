@@ -28,12 +28,12 @@ function hero(){
   const N=[['Order confirmed','Fresh Valley · 320 cs Roma 5x6 · $4,640'],['Order confirmed','Rio Bravo · 200 cs super cucumber · $3,600'],['Order confirmed','Valle Verde · 480 cs bell pepper · $7,920'],['Rep approved','Sun Coast · 150 cs limes · $2,250'],['Order confirmed','Mercado Norte · 260 cs squash · $3,120'],['Order confirmed','Agro Baja · 240 cs cucumber · $4,320'],['Order confirmed','Del Norte · 180 cs mango · $3,960']];
   const wrap=el('<div id="sb-notifs"></div>'); content.appendChild(wrap);
   const slots=[['L',150],['R',230],['L',420],['R',520]]; let idx=0, live=0;
-  const pop=()=>{ if(live<2){ const s=slots[idx%slots.length]; const d=N[idx%N.length]; idx++;
+  const pop=()=>{ if(live<1){ const s=slots[idx%slots.length]; const d=N[idx%N.length]; idx++;
       const n=el(`<div class="sb-notif ${s[0]}" style="top:${s[1]}px"><span class="ic">$</span><div class="inner"><b>${d[0]}</b><span>${d[1]}</span></div></div>`);
       wrap.appendChild(n); live++; requestAnimationFrame(()=>n.classList.add('on'));
-      setTimeout(()=>{ n.classList.remove('on'); setTimeout(()=>{ n.remove(); live--; },400); }, 3000); }
-    setTimeout(pop, 1400+Math.random()*1600); };
-  setTimeout(pop, 900);
+      setTimeout(()=>{ n.classList.remove('on'); setTimeout(()=>{ n.remove(); live--; },800); }, 4500); }
+    setTimeout(pop, 3800+Math.random()*2200); };
+  setTimeout(pop, 1600);
 }
 function heroFit(){ const hero=$('[data-framer-name="Hero"]'); const content=hero&&$('[data-framer-name="Content"]',hero); const pill=hero&&$('[data-framer-name="Label"]',hero); const btn=hero&&$('[data-framer-name="Buttons"]',hero); const imgc=hero&&hero.querySelector('.framer-aqtgzr'); if(!hero||!content||!pill||!btn||!imgc) return;
   const vh=innerHeight; const heroTop=hero.getBoundingClientRect().top+scrollY;
@@ -63,9 +63,11 @@ function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*
 function links(){
   const sec=(n,id)=>{const e=document.querySelector('[data-framer-name="'+n+'"]'); if(e&&!e.id) e.id=id;};
   sec('Feature Section','how'); sec('Demo Section','demo'); sec('Integration Section','setup'); sec('Solutions Section','solution');
-  const MAPL={'How it works':'#how','Set up':'#setup','Solution':'#solution','Contact us':'mailto:hello@usesoba.com?subject=Soba','Home':'#','soba':'#','Book a demo':'https://calendar.app.google/pWPid79eAXuna1nh8','Ask a question':'mailto:hello@usesoba.com?subject=Question%20about%20Soba','Contact':'mailto:hello@usesoba.com','Privacy':'/privacy.html','Terms':'/terms.html'};
+  const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=window.SB_PAGE!=='contact'; const H=onHome?'':'/';
+  const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','hello@usesoba.com':'mailto:hello@usesoba.com','+1 (480) 819-8035':'tel:+14808198035','Privacy':'/privacy.html','Terms':'/terms.html'};
   document.querySelectorAll('a').forEach(a=>{ const t=a.textContent.replace(/\s+/g,' ').trim(); const key=Object.keys(MAPL).find(k=>t===k||t===k+' '+k||t===k+k); const href=a.getAttribute('href')||'';
-    if(key){ if(a.getAttribute('href')!==MAPL[key]) a.setAttribute('href',MAPL[key]); if(/^https:/.test(MAPL[key])){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); } }
+    if(key){ if(a.getAttribute('href')!==MAPL[key]) a.setAttribute('href',MAPL[key]); if(/^https:/.test(MAPL[key])){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }
+      if(!/^#/.test(MAPL[key]) && !a.dataset.sbx){ a.dataset.sbx='1'; a.addEventListener('click',ev=>{ ev.stopPropagation(); },true); } }
     else if(/lunisdesign|framer\.com|nexura/i.test(href)) a.removeAttribute('href');
     if(/^#/.test(a.getAttribute('href')||'') && !a.dataset.sb){ a.dataset.sb='1'; a.addEventListener('click',ev=>{ const id=a.getAttribute('href').slice(1); const el=id&&document.getElementById(id); if(el){ ev.preventDefault(); ev.stopPropagation(); const y=el.getBoundingClientRect().top+scrollY-80; window.scrollTo({top:y,behavior:'smooth'}); } else if(!id){ ev.preventDefault(); window.scrollTo({top:0,behavior:'smooth'}); } },true); }
   });
@@ -155,8 +157,44 @@ function rows(){
   labels.forEach(l=>l.addEventListener('click',()=>{ const r=rowsEls[+l.dataset.i]; window.scrollTo({top:r.getBoundingClientRect().top+scrollY-innerHeight*0.5+r.getBoundingClientRect().height/2,behavior:'smooth'}); }));
 }
 function scrolled(){ document.body.classList.toggle('sb-scrolled', scrollY>innerHeight*0.85); }
-function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
+/* ---- nav: a Contact us item cloned from the Solution slot (desktop nav + phone menu) ---- */
+function navContact(){
+  const fix=c=>{ const a=c.querySelector('a'); const p=c.querySelector('a .framer-text'); if(!a||!p) return false; if(a.getAttribute('href')!=='/contact'){ a.setAttribute('href','/contact'); a.removeAttribute('target'); delete a.dataset.sb; delete a.dataset.sbx; } if(p.textContent.trim()!=='Contact us') p.textContent='Contact us'; return true; };
+  document.querySelectorAll('.sb-nav-contact').forEach(fix);
+  ['.framer-2pvb77-container','.framer-1b06bnt-container'].forEach(sel=>document.querySelectorAll(sel+':not(.sb-nav-contact)').forEach(slot=>{
+    const par=slot.parentElement; if(!par||par.querySelector('.sb-nav-contact')) return;
+    if(!slot.querySelector('a .framer-text')) return; // Framer has not rendered the link yet; a later run will
+    const c=slot.cloneNode(true); c.classList.add('sb-nav-contact'); c.removeAttribute('style');
+    if(fix(c)) par.insertBefore(c, slot.nextSibling);
+  }));
+}
+/* ---- footer columns: Soba = Home / How it works / Solution; Company = Book a demo / Contact us ---- */
+function footerCols(){
+  const set=(sel,text)=>document.querySelectorAll(sel).forEach(c=>{ const p=c.querySelector('p'); if(p&&p.textContent.trim()!==text) p.textContent=text; });
+  set('.framer-n611z5-container','Book a demo'); set('.framer-4pmyip-container','Contact us');
+}
+/* ---- contact form: posts to the app, which mails hello@usesoba.com ---- */
+function contactForm(){
+  const f=document.querySelector('form[data-framer-form]'); if(!f) return;
+  const ph={Name:'Your name',Email:'you@company.com'}; f.querySelectorAll('input[name="Name"],input[name="Email"]').forEach(i=>{ if(i.placeholder!==ph[i.name]) i.placeholder=ph[i.name]; });
+  const ta=f.querySelector('textarea'); if(ta&&ta.placeholder!=='Products, markets, volume. Anything.') ta.placeholder='Products, markets, volume. Anything.';
+  if(f.dataset.sb) return; f.dataset.sb='1';
+  f.addEventListener('submit',async ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    const v=n=>{ const e=f.querySelector('[name="'+n+'"]'); if(!e) return ''; if(e.tagName==='SELECT'){ const o=e.options[e.selectedIndex]; return o&&!o.disabled?o.textContent.trim():''; } return e.value.trim(); };
+    const data={name:v('Name'),email:v('Email'),kind:v('What best describes you?'),orders:v('Where are you in your journey?'),message:v('Message'),website:v('website'),company:v('company')};
+    if(!data.name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){ (data.name?f.querySelector('[name="Email"]'):f.querySelector('[name="Name"]')).focus(); return; }
+    const btn=f.querySelector('button,input[type=submit]'); const label=btn&&btn.textContent; if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
+    let ok=false; try{ const r=await fetch('https://app.usesoba.com/api/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)}); ok=r.ok; }catch(e){ ok=false; }
+    if(ok){ f.innerHTML='<div class="sb-sent"><b>Got it.</b> We reply within one business day. Faster if you text 480 819 8035.</div>'; }
+    else { if(btn){ btn.disabled=false; btn.style.opacity=''; } location.href='mailto:hello@usesoba.com?subject='+encodeURIComponent('Soba: '+data.name)+'&body='+encodeURIComponent([data.name,data.email,data.kind,data.orders,'',data.message].join('\n')); }
+  },true);
+}
+function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
 window.sobaLayer=all;
+/* Framer 'appear' sometimes never fires for a variant (seen on the contact page's phone layout): after load, reveal anything still at its pre-animation opacity inside the viewport. Below-the-fold scroll reveals stay as they are. */
+function appearFallback(){ document.querySelectorAll('[style*="opacity: 0.001"],[style*="opacity:0.001"]').forEach(e=>{ const r=e.getBoundingClientRect(); if(r.bottom>0&&r.top<innerHeight&&r.width>0&&parseFloat(getComputedStyle(e).opacity)<0.01){ e.style.opacity='1'; e.style.transform='none'; } }); }
+window.addEventListener('load',()=>{ setTimeout(appearFallback,2500); setTimeout(appearFallback,5000); });
 addEventListener('scroll',scrolled,{passive:true}); scrolled();
 addEventListener('load',()=>{ all(); setTimeout(all,900); setTimeout(all,2500); });
 if(document.readyState==='complete') all();

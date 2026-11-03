@@ -40,7 +40,7 @@ footer [data-framer-name="Spacer"]{display:none!important}
 .sb-chat .m.in{background:#fff;align-self:flex-start;border-top-left-radius:3px}.sb-chat .m.out{background:#DCF8C6;align-self:flex-end;border-top-right-radius:3px}
 .sb-chat .m .t{display:block;text-align:right;font-size:10.5px;color:#777;margin-top:3px}
 .sb-chat .m b{font-weight:600}
-.sb-notif{position:absolute!important;z-index:3;width:250px!important;flex:none;background:#fff;border:1px solid var(--sb-line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.1);padding:9px 11px;display:flex;gap:10px;align-items:center;font-family:Inter,sans-serif;text-align:left;opacity:0;transform:translateY(10px) scale(.96);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
+.sb-notif{position:absolute!important;z-index:3;width:250px!important;flex:none;background:#fff;border:1px solid var(--sb-line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.1);padding:9px 11px;display:flex;gap:10px;align-items:center;font-family:Inter,sans-serif;text-align:left;opacity:0;transform:translateY(8px);transition:opacity .7s ease,transform .8s cubic-bezier(.22,.61,.36,1);pointer-events:none}
 .sb-notif.on{opacity:1;transform:none}
 .sb-notif .ic{width:30px;height:30px;border-radius:50%;background:#1DA462;color:#fff;flex:none;display:grid;place-items:center;font-weight:700;font-size:16px}
 .sb-notif .inner{flex:1;min-width:0}.sb-notif b{font-size:12.5px;display:block;color:#111}.sb-notif span{font-size:11.5px;color:#555;display:block;line-height:1.3}
@@ -364,3 +364,7 @@ footer [data-framer-name="Footer Nav Links"]{align-items:flex-start!important}
 .g-price{width:380px}.g-price .lab{white-space:nowrap}.g-price .num{padding:4px 6px}
 @media(max-width:700px){.g-price{width:100%;padding:20px}.g-price .lab{white-space:normal;max-width:150px}.g-price .num{font-size:26px}}
 @media(max-width:700px){.g-price .row{flex-direction:column;align-items:flex-start;gap:2px}.g-price .lab{max-width:none}.g-price .num{align-self:flex-end;font-size:28px}}
+/* pass 8: nav Contact us, footer columns, phone menu, contact form */
+.framer-uw9lja-container,.framer-2jp9fh-container,.framer-fux8ea-container,.framer-1txej56,.framer-7rvtdn-container{display:none!important}
+.sb-sent{padding:28px 24px;border:1px solid #e6e6e6;border-radius:16px;background:#fff;font-size:17px;line-height:1.5;color:#0B1A2B}
+

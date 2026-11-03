@@ -3,7 +3,49 @@ and again at runtime after Framer hydrates (Framer repaints its own text otherwi
 import re, html, json, urllib.parse, pathlib
 import os
 ROOT = pathlib.Path(__file__).parent
-h = (ROOT/"mirror.html").read_text(encoding="utf-8")
+import sys
+PAGE = sys.argv[1] if len(sys.argv) > 1 else 'home'
+SRC = {'home': 'mirror.html', 'contact': 'mirror-contact.html'}[PAGE]
+OUT = {'home': 'v1.html', 'contact': 'contact.html'}[PAGE]
+TITLE = {'home': 'Soba. The sales desk that answers at 2 a.m.', 'contact': 'Contact Soba'}[PAGE]
+OGTITLE = {'home': 'Soba. Your sales desk now answers 24/7', 'contact': 'Contact Soba'}[PAGE]
+CANON = {'home': 'https://usesoba.com/', 'contact': 'https://usesoba.com/contact'}[PAGE]
+h = (ROOT/SRC).read_text(encoding="utf-8")
+
+CONTACT_MAP = [
+ ("Start the conversation. We're ready to help.", "Tell us about your desk."),
+ ("Let's talk about what intelligent automation can do for your business. Tell us where you're at and we'll figure out the rest.",
+  "What you sell, where your buyers are, and how orders reach you after close. We reply within one business day."),
+ ("What best describes you?", "What kind of operation?"),
+ ("Marketing Agency", "Grower-shipper"), ("In-house Marketing Team", "Importer"), ("AI Consultant", "Wholesaler"), ("Startup Founder", "Distributor"),
+ ("Where are you in your journey?", "How do after-hours orders reach you today?"),
+ ("Just researching", "Voicemail and callbacks"), ("Evaluating tools / comparing options", "A rep's cell phone"), ("Already have a solution, looking to switch", "Text or WhatsApp"),
+ ("Anything else you'd like us to know?", "Anything else?"),
+ ("Send message", "Send"),
+ ("Got a question? We'll get back to you within 24 hours.", "Got a question? We reply within one business day."),
+ ("hello@nexura.ai", "hello@usesoba.com"),
+ ("Join the community", "Book a demo"),
+ ("Stay up to date with product news, tips, and updates.", "Thirty minutes on a call, with your line and your price sheet."),
+ ("Follow us on X", "Pick a time"),
+ ("Talk to sales", "Text or call"),
+ ("Prefer to talk it out? Our team is available Mon\u2013Fri, 9am\u20136pm.", "Prefer to talk it out? Text or call and a founder picks up."),
+ ("+1 (800) 123-4567", "+1 (480) 819-8035"),
+ ("Can I switch plans or cancel anytime?", "Does Soba speak Spanish?"),
+ ("Absolutely. All plans are flexible with no long-term contracts. You can upgrade, downgrade, or cancel at any time.",
+  "Yes. It answers in whichever language the buyer uses, English or Spanish, and reads every number back before it confirms."),
+ ("Do you offer custom or enterprise pricing?", "What happens when a buyer asks for a price below my sheet?"),
+ ("Yes. If your team has specific needs, reach out via the form or book a call with sales and we'll put together a custom plan.",
+  "Nothing gets confirmed. The request goes to your on-call rep on WhatsApp to approve, counter, reject or take over."),
+ ("How quickly will I hear back after submitting the form?", "How quickly will I hear back?"),
+ ("We typically respond within 1 business day. For urgent inquiries, feel free to email us directly.",
+  "Within one business day. Faster if you text."),
+ ("What kind of support is included with my plan?", "What do I need to set up?"),
+ ("All plans include access to our help center and email support. Pro and Enterprise plans get priority support and a dedicated account manager.",
+  "Forward your line after close or after four rings, and text or email tonight's price sheet. That's it."),
+ ("Can I integrate Nexura with my marketing tools?", "Can I keep my phone number?"),
+ ("Yes \u2014 Nexura connects with a wide range of tools including CRMs, email platforms, and analytics software. Check our integrations page for the full list.",
+  "Yes. Soba sits behind your existing line through call forwarding. Nothing changes for your buyers."),
+]
 
 MAP = [
  # nav
@@ -78,6 +120,7 @@ MAP = [
  ("Designed by Lunis. All rights reserved.", "© 2026 Soba AI. All rights reserved."),
  ("Nexura", "soba"),
 ]
+if PAGE == 'contact': MAP = CONTACT_MAP + MAP
 MAP = [(a, b) for a, b in MAP if a != b]
 
 # ---- HTML pre-pass (first paint)
@@ -165,7 +208,7 @@ function run(){ if(busy) return; busy=true; if(obs) obs.disconnect();
             else { const words=nw.split(' '); const origc=seg.map(s=>norm(s).split(' ').length); let pos=0; for(let k=0;k<L;k++){ const take=k<L-1?origc[k]:words.length-pos; const chunk=words.slice(pos,pos+take); pos+=take; const lead=(seg[k].match(/^\\s*/)||[''])[0], trail=(seg[k].match(/\\s*$/)||[''])[0]; let t=chunk.join(' '); if(chunk.length&&k>0&&!lead&&!/^[A-Za-z0-9]/.test(seg[k].trim())&&/^[A-Za-z0-9]/.test(t)&&!/ $/.test(nodes[j+k-1].nodeValue)) t=' '+t; nodes[j+k].nodeValue=lead+t+trail; } }
             j+=L-1; break; }
           if(joined.length>target.length) break; } } }
-    document.title='Soba. The sales desk that answers at 2 a.m.'; if(window.sobaLayer) window.sobaLayer();
+    document.title=window.SB_TITLE||document.title; if(window.sobaLayer) window.sobaLayer();
     [...document.querySelectorAll('h1,h2,h3')].filter(e=>/Book a demo, or just ask/.test(e.textContent)).forEach(e=>{let c=e;for(let i=0;i<7&&c.parentElement;i++)c=c.parentElement; const w2=document.createTreeWalker(c,NodeFilter.SHOW_TEXT); while(w2.nextNode()){ if(w2.currentNode.nodeValue.trim()==='Contact us') w2.currentNode.nodeValue=w2.currentNode.nodeValue.replace('Contact us','Ask a question'); }});
     [...document.querySelectorAll('a')].filter(a=>a.textContent.trim()==='Pricing').forEach(a=>{(a.closest('[class*="-container"]')||a).style.display='none'});
   } finally { busy=false; if(obs) obs.observe(document.body,{childList:true,subtree:true,characterData:true}); }
@@ -185,6 +228,7 @@ while True:
 print("cta buttons retitled:", kc)
 style += '<style id="soba-css">' + (ROOT/'soba.css').read_text() + '</style>'
 h = h.replace('</head>', style + '</head>', 1)
+script = '<script id="soba-page">window.SB_PAGE=%s;window.SB_TITLE=%s;</script>' % (json.dumps(PAGE), json.dumps(TITLE)) + script
 script += '<script id="soba-js">' + (ROOT/'soba.js').read_text() + '</script>'
 h = h.replace('</body>', script + '</body>', 1)
 # hero illustration -> our farmland image
@@ -193,20 +237,21 @@ h = re.sub(r'src="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2
 h = re.sub(r'srcset="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'srcset="img/cta.jpg?v=3 2400w"', h)
 h = re.sub(r'src="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'src="img/cta.jpg?v=3"', h)
 print("image refs left:", h.count('epYjC31PopakdO7OcpxMsWS2y0'), h.count('Pai7r7UdkYU5XAvtSCnRGv7lC8'))
-h = re.sub(r'<title>.*?</title>', '<title>Soba. The sales desk that answers at 2 a.m.</title>', h, count=1)
+h = re.sub(r'<title>.*?</title>', '<title>%s</title>' % TITLE, h, count=1)
 
+h = re.sub(r'mailto:\s*hello@nexura\.ai', 'mailto:hello@usesoba.com', h); h = re.sub(r'href="https://contra\.com/[^"]*"', 'href="/"', h).replace('tel:+18001234567', 'tel:+14808198035')
 # head: Soba metadata instead of the template's
 DESC = "Soba picks up your company line after close, takes the buyer's order in English or Spanish, and confirms it at the prices you set."
-h = h.replace('<link rel="canonical" href="https://nexura.framer.ai/">', '<link rel="canonical" href="https://usesoba.com/"><link rel="icon" href="/favicon.svg" type="image/svg+xml">')
-h = h.replace('<meta property="og:url" content="https://nexura.framer.ai/">', '<meta property="og:url" content="https://usesoba.com/">')
+h = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="%s"><link rel="icon" href="/favicon.svg" type="image/svg+xml">' % CANON, h)
+h = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="%s">' % CANON, h)
 h = re.sub(r'<meta name="description" content="[^"]*">', '<meta name="description" content="%s">' % DESC, h)
 h = re.sub(r'<meta name="framer-search-index(?:-fallback)?" content="[^"]*">', '', h)
-h = re.sub(r'<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="Soba. Your sales desk now answers 24/7">', h)
-h = re.sub(r'<meta name="twitter:title" content="[^"]*">', '<meta name="twitter:title" content="Soba. Your sales desk now answers 24/7">', h)
+h = re.sub(r'<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="%s">' % OGTITLE, h)
+h = re.sub(r'<meta name="twitter:title" content="[^"]*">', '<meta name="twitter:title" content="%s">' % OGTITLE, h)
 h = re.sub(r'<meta property="og:description" content="[^"]*">', '<meta property="og:description" content="%s">' % DESC, h)
 h = re.sub(r'<meta name="twitter:description" content="[^"]*">', '<meta name="twitter:description" content="%s">' % DESC, h)
 h = re.sub(r'<meta property="og:image" content="[^"]*">', '<meta property="og:image" content="https://usesoba.com/img/og.jpg">', h)
 h = re.sub(r'<meta name="twitter:image" content="[^"]*">', '<meta name="twitter:image" content="https://usesoba.com/img/og.jpg">', h)
 print("template refs left in head:", h[:h.find('</head>')].count('nexura'))
-(ROOT.parent/"v1.html").write_text(h, encoding="utf-8")
+(ROOT.parent/OUT).write_text(h, encoding="utf-8")
 print("bytes:", len(h))
