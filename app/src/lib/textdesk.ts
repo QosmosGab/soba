@@ -3,11 +3,10 @@
 // thread goes through the shared intake. Replies to a confirmation become a
 // change request; YES/NO after a counter settle the callback.
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
-import { llm, MODEL } from "./llm";
+import { generateJson, LlmRefusal } from "./llm";
 import { loadCustomer } from "./cards";
 import { handleIntake } from "./intake";
 import { sendToBuyer } from "./messaging";
@@ -49,14 +48,12 @@ export async function deskTextTurn(msgs: Msg[], ctx: { customer: string; timezon
     ctx.quotePrices && ctx.rules.length ? `Tonight's prices you may quote: ${ctx.rules.join("; ")}` : "Do not quote prices; say the team will confirm the price.",
     ctx.priorRef ? `This buyer is replying to the confirmation of ref ${ctx.priorRef}; treat the message as a change request to that order.` : "",
   ].filter(Boolean).join("\n");
-  const response = await llm().messages.parse({
-    model: MODEL, max_tokens: 1200,
-    output_config: { effort: "low", format: zodOutputFormat(TurnSchema) },
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `${context}\n\nConversation so far:\n${threadText(msgs)}\n\nWrite the desk's next reply.` }],
-  });
-  if (response.stop_reason === "refusal" || !response.parsed_output) return { reply: "Got it. I'll pass this to the team and they'll get back to you.", complete: true, type: "other", language: "en" };
-  return response.parsed_output;
+  try {
+    return await generateJson({ schema: TurnSchema, system: SYSTEM, user: `${context}\n\nConversation so far:\n${threadText(msgs)}\n\nWrite the desk's next reply.`, effort: "low", maxTokens: 1200 });
+  } catch (err) {
+    if (err instanceof LlmRefusal) return { reply: "Got it. I'll pass this to the team and they'll get back to you.", complete: true, type: "other", language: "en" };
+    throw err;
+  }
 }
 
 export type BuyerTextInput = { customerId: string; lineId: string | null; from: string; body: string; providerId: string | null; now: Date };

@@ -35,7 +35,7 @@ export const env = {
   get sessionSecret() { return process.env.SESSION_SECRET ?? (process.env.NODE_ENV === "production" ? need("SESSION_SECRET") : "soba-dev-secret"); },
   /** Names of the variables a production deploy must have; the health route reports the missing ones. */
   missing(): string[] {
-    const want = ["APP_URL", "DATABASE_URL", "SESSION_SECRET", "ADMIN_TOKEN", "ANTHROPIC_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM", "ELEVENLABS_API_KEY", "ELEVENLABS_WEBHOOK_SECRET", "ELEVENLABS_TOOL_SECRET", "ELEVENLABS_CALLBACK_AGENT_ID", "RESEND_API_KEY", "INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"];
+    const want = ["APP_URL", "DATABASE_URL", "SESSION_SECRET", "ADMIN_TOKEN", "GEMINI_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM", "ELEVENLABS_API_KEY", "ELEVENLABS_WEBHOOK_SECRET", "ELEVENLABS_TOOL_SECRET", "ELEVENLABS_CALLBACK_AGENT_ID", "RESEND_API_KEY", "INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"];
     return want.filter((k) => !process.env[k]);
   },
   get inngestEventKey() { return process.env.INNGEST_EVENT_KEY; },

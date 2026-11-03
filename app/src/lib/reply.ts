@@ -1,10 +1,9 @@
 // Reads what a rep sends back on a card: a button tap, or plain words like
 // "yes but only 200", "tell him 8.75", "no, we're short", "take", "let me think".
-// Fast path in code for the unambiguous shapes; Claude for the rest; one
+// Fast path in code for the unambiguous shapes; the model for the rest; one
 // clarifying question when neither is sure.
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { llm, MODEL } from "./llm";
+import { generateJson } from "./llm";
 
 export const RepReplySchema = z.object({
   action: z.enum(["approve", "counter", "reject", "take_over", "undo", "won", "lost", "skip", "acknowledged", "unclear"]),
@@ -59,13 +58,9 @@ export async function parseRepReply(text: string, context?: { buyerFirst?: strin
   const fast = parseRepReplyFast(text);
   if (fast) return fast;
   const ctxLine = context ? `The request: ${context.buyerFirst ?? "the buyer"} wants ${context.cases ?? "?"} cases at ${context.priceOffered != null ? `$${context.priceOffered.toFixed(2)}` : "no stated price"}.` : "";
-  const response = await llm().messages.parse({
-    model: MODEL,
-    max_tokens: 800,
-    output_config: { effort: "low", format: zodOutputFormat(RepReplySchema) },
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `${ctxLine}\nRep's reply: "${text}"`.trim() }],
-  });
-  if (response.stop_reason === "refusal" || !response.parsed_output) return r("unclear", { clarify: "Sorry, I didn't get that. Approve, counter with a price, reject, or take over?" });
-  return response.parsed_output;
+  try {
+    return await generateJson({ schema: RepReplySchema, system: SYSTEM, user: `${ctxLine}\nRep's reply: "${text}"`.trim(), effort: "low", maxTokens: 800 });
+  } catch {
+    return r("unclear", { clarify: "Sorry, I didn't get that. Approve, counter with a price, reject, or take over?" });
+  }
 }

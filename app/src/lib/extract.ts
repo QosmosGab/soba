@@ -1,9 +1,8 @@
 // Turns a call transcript or a text thread into a structured request.
-// One Claude call with structured output, then deterministic clean-up in code
+// One model call with structured output, then deterministic clean-up in code
 // (canonical product names, pickup dates in the customer's time zone).
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { llm, MODEL } from "./llm";
+import { generateJson } from "./llm";
 import { normalizeProduct, resolvePickupDate } from "./produce";
 
 export const RequestTypeSchema = z.enum(["new_order", "availability", "hold", "change", "complaint", "pickup", "other"]);
@@ -70,16 +69,7 @@ export async function extractRequest(transcript: string, ctx: CustomerContext): 
     ctx.products?.length ? `Products on tonight's price sheet: ${ctx.products.join("; ")}` : "No price sheet loaded tonight.",
   ].join("\n");
 
-  const response = await llm().messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    output_config: { effort: "medium", format: zodOutputFormat(ExtractedRequestSchema) },
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `${context}\n\nTranscript:\n${transcript}` }],
-  });
-  if (response.stop_reason === "refusal") throw new Error(`Extraction refused: ${response.stop_details?.explanation ?? "no explanation"}`);
-  const parsed = response.parsed_output;
-  if (!parsed) throw new Error("Extraction returned no structured output");
+  const parsed = await generateJson({ schema: ExtractedRequestSchema, system: SYSTEM, user: `${context}\n\nTranscript:\n${transcript}`, effort: "medium" });
   return { ...parsed, resolvedLines: parsed.lines.map((l) => resolveLine(l, ctx)) };
 }
 

@@ -15,7 +15,7 @@ import { sendToRep } from "./messaging";
 export type IntakeInput = {
   customerId: string; channel: "call" | "text"; transcript: string; now: Date;
   callerId?: string | null; providerConversationId?: string | null; transcriptUrl?: string | null;
-  /** Already-extracted result (mid-call tool path, tests); otherwise Claude reads the transcript. */
+  /** Already-extracted result (mid-call tool path, tests); otherwise the model reads the transcript. */
   extracted?: Extracted | null;
   threadId?: string | null;
 };
@@ -33,7 +33,7 @@ async function isForwardingTest(db: Db, customerId: string, callerId: string | n
   return ours.length > 0;
 }
 
-/** When Claude can't read the transcript, the reps still get a card with the raw notes. */
+/** When the model can't read the transcript, the reps still get a card with the raw notes. */
 function unreadableExtraction(transcript: string, callerId: string | null, channel: "call" | "text"): Extracted {
   return {
     type: "other", callerName: null, callerCompany: null, callerCity: null, callbackNumber: callerId, callbackPermission: null,

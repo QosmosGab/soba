@@ -27,7 +27,7 @@ describe("rep reply fast path (offline)", () => {
   });
 });
 
-describe.skipIf(!hasLlmCredentials())("rep reply via Claude (live)", () => {
+describe.skipIf(!hasLlmCredentials())("rep reply via the model (live)", () => {
   const ctx = { buyerFirst: "Mike", cases: 300, priceOffered: 8.25 };
   it("tell him 8.75 → counter", async () => {
     expect(await parseRepReply("tell him 8.75", ctx)).toMatchObject({ action: "counter", price: 8.75 });

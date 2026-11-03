@@ -1,12 +1,11 @@
 // Tonight's prices: typed commands ("4x4 VR 8.50 600 till Mon 7am", "pause
-// Romas", "same as last night"), price sheets read by Claude with a read-back
+// Romas", "same as last night"), price sheets read by the model with a read-back
 // before anything goes live, and the nightly "same prices?" prompt.
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { and, desc, eq, gt, lt } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
-import { llm, MODEL } from "./llm";
+import { generateJson } from "./llm";
 import { normalizePack, normalizeProduct, normalizeSize } from "./produce";
 import { nextOpening } from "./hours";
 import { loadCustomer } from "./cards";
@@ -154,7 +153,7 @@ export async function lastNightsRules(db: Db, customerId: string, now: Date): Pr
   return Array.from(seen.values());
 }
 
-// ---- Price sheets (PDF, photo, pasted text) read by Claude ----
+// ---- Price sheets (PDF, photo, pasted text) read by the model ----
 
 const SheetSchema = z.object({
   rules: z.array(z.object({
@@ -173,32 +172,20 @@ const SHEET_SYSTEM = `You read a fresh-produce sales desk's daily price sheet (P
 Rules: prices per pound must be converted to per case using the pack weight and noted. If quantities are missing, ask one question rather than inventing them. Skip lines with no price. Keep sizes as written (4x4, 5x6, XL). Products get canonical English names. Spanish sheets are common.`;
 
 export async function parsePriceSheet(input: { text?: string; file?: { base64: string; mediaType: string } }): Promise<z.infer<typeof SheetSchema>> {
-  const content: Array<Record<string, unknown>> = [];
-  if (input.file) {
-    if (input.file.mediaType === "application/pdf") content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: input.file.base64 } });
-    else content.push({ type: "image", source: { type: "base64", media_type: input.file.mediaType, data: input.file.base64 } });
-  }
-  content.push({ type: "text", text: input.text ? `Price sheet text:\n${input.text}` : "Read the attached price sheet." });
-  const response = await llm().messages.parse({
-    model: MODEL, max_tokens: 4000,
-    output_config: { effort: "medium", format: zodOutputFormat(SheetSchema) },
-    system: [{ type: "text", text: SHEET_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: content as never }],
+  return generateJson({
+    schema: SheetSchema, system: SHEET_SYSTEM, effort: "medium",
+    user: input.text ? `Price sheet text:\n${input.text}` : "Read the attached price sheet.",
+    attachments: input.file ? [input.file] : [],
   });
-  if (response.stop_reason === "refusal" || !response.parsed_output) throw new Error("Price sheet could not be read");
-  return response.parsed_output;
 }
 
 /** Applies a rep's "fix" ("4x4 should be 8.75", "drop the Romas") to a pending sheet. */
 export async function fixPriceSheet(rules: ParsedRule[], fix: string): Promise<z.infer<typeof SheetSchema>> {
-  const response = await llm().messages.parse({
-    model: MODEL, max_tokens: 3000,
-    output_config: { effort: "low", format: zodOutputFormat(SheetSchema) },
-    system: [{ type: "text", text: `${SHEET_SYSTEM}\nYou are given the rules already read and a correction from the sales manager. Return the full corrected list.` }],
-    messages: [{ role: "user", content: `Current rules:\n${JSON.stringify(rules, null, 1)}\n\nCorrection: "${fix}"` }],
+  return generateJson({
+    schema: SheetSchema, effort: "low", maxTokens: 3000,
+    system: `${SHEET_SYSTEM}\nYou are given the rules already read and a correction from the sales manager. Return the full corrected list.`,
+    user: `Current rules:\n${JSON.stringify(rules, null, 1)}\n\nCorrection: "${fix}"`,
   });
-  if (response.stop_reason === "refusal" || !response.parsed_output) throw new Error("Fix could not be applied");
-  return response.parsed_output;
 }
 
 /** Stores a parsed sheet as pending and returns the read-back for the rep (Yes / Fix). */
