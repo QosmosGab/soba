@@ -7,7 +7,7 @@ import sys
 PAGE = sys.argv[1] if len(sys.argv) > 1 else 'home'
 SRC = {'home': 'mirror.html', 'contact': 'mirror-contact.html'}[PAGE]
 OUT = {'home': 'v1.html', 'contact': 'contact.html'}[PAGE]
-TITLE = {'home': 'Soba. The sales desk that answers at 2 a.m.', 'contact': 'Contact Soba'}[PAGE]
+TITLE = {'home': 'Soba - Revenue solutions for produce companies', 'contact': 'Contact - Soba'}[PAGE]
 OGTITLE = {'home': 'Soba. Your sales desk now answers 24/7', 'contact': 'Contact Soba'}[PAGE]
 CANON = {'home': 'https://usesoba.com/', 'contact': 'https://usesoba.com/contact'}[PAGE]
 h = (ROOT/SRC).read_text(encoding="utf-8")
