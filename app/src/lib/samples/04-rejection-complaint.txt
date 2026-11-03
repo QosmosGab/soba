@@ -1,0 +1,8 @@
+Desk: Del Campo Supreme, sales. How can I help?
+Buyer: Yeah, this is Carl at Sunny Foods in Dallas. Your load got here two hours ago and the romas are soft, half the pallets, I got the inspector coming at six AM. I need somebody to call me now, not in the morning.
+Desk: I'm sorry to hear that. Which load is it?
+Buyer: PO 4471, picked up Tuesday.
+Desk: PO 4471, Roma tomatoes, arrived about two hours ago, about half the pallets soft, USDA inspection at 6am. Do you want a credit or are you rejecting the load?
+Buyer: Depends what the inspector says. But somebody needs to call me. 214-555-0133.
+Desk: 214-555-0133. I'm getting this to the team right now. Can we call you back at this number?
+Buyer: Yes, now.

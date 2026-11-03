@@ -1,0 +1,11 @@
+Desk: Del Campo Supreme, sales. How can I help?
+Buyer: Hey, this is Mike Torres over at Lopez Bros in Chicago. You guys got any 4x4 vine-ripes?
+Desk: We may. What are you looking for?
+Buyer: I need 300 cases, 25 pound two-layer, for Monday pickup. My truck's gonna be in Nogales Monday morning.
+Desk: 300 cases of 4x4 vine-ripe tomatoes, 25 pound two-layer, pickup Monday, your truck. What price are you looking at?
+Buyer: I can do eight and a quarter.
+Desk: $8.25 a case. Let me make sure I have your callback number.
+Buyer: 312-555-0142.
+Desk: 312-555-0142. The team will get back to you. Is it okay if we call or text you back at that number?
+Buyer: Yeah, call me. Or text, either one.
+Desk: Got it. Thanks Mike.

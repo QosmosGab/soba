@@ -1,0 +1,10 @@
+Desk: Del Campo Supreme, sales. How can I help?
+Buyer: Hola, this is Danny from Valley Fresh in Phoenix. Oye, what's your price on romas tonight, the 5x6?
+Desk: On tonight's sheet the Roma 5x6 is $7.25 a case, 25 pound.
+Buyer: Mmm, seven twenty-five está caro. I'll take 200 if you can do 6.75. Y también necesito 100 cajas de chile morrón rojo, extra large.
+Desk: 200 cases Roma 5x6 at $6.75, and 100 cases red bell peppers XL. When do you need them?
+Buyer: Mañana, I'm sending the truck mañana temprano.
+Desk: Tomorrow morning, your truck. What number can we reach you at?
+Buyer: This one, 602-555-0170.
+Desk: 602-555-0170. Can we call or text you back?
+Buyer: Text is fine.

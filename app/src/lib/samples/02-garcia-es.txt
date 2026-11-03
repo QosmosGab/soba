@@ -1,0 +1,10 @@
+Desk: Del Campo Supreme, ventas. ¿En qué le puedo ayudar?
+Buyer: Buenas noches, habla Ramiro de Garcia Produce en Houston. Quería saber si tienen jitomate saladette, cinco por seis.
+Desk: Sí, le puedo tomar el pedido. ¿Cuántas cajas necesita?
+Buyer: Trescientas cajas, de veinticinco libras. Para recoger el jueves, mando mi tráiler.
+Desk: Trescientas cajas de jitomate saladette cinco por seis, veinticinco libras, recoger el jueves con su tráiler. ¿Tiene un precio en mente?
+Buyer: Ando buscando siete cincuenta.
+Desk: Siete cincuenta la caja. ¿Me da un número para regresarle la llamada?
+Buyer: Sí, 713-555-0188.
+Desk: 713-555-0188. ¿Está bien si le llamamos o le mandamos mensaje a ese número?
+Buyer: Sí, mándenme mensaje mejor.
