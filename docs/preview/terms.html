@@ -573,6 +573,8 @@ label.framer-68cn0z,label.framer-23uauw{display:none!important}
 .sb-legal a{color:#0099FF;text-decoration:none}.sb-legal a:hover{text-decoration:underline}
 .sb-legal .muted{color:#6b6b6b;font-size:15px}.sb-legal strong{color:#0B1A2B;font-weight:600}
 @media(max-width:700px){.sb-legal{font-size:16px;padding:0 20px 64px}.sb-legal h2{font-size:21px}}
+/* 404 */
+.sb-404{display:flex;gap:14px;justify-content:center;align-items:center;font-size:17px;margin:0 0 40px}.sb-404 a{color:#0B1A2B;font-weight:600;text-decoration:none;border-bottom:1.5px solid #0099FF}.sb-404 span{color:#aaa}
 
 </style><style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style><template id="sb-legal-src"><p>These terms govern use of the Soba service and the usesoba.com website, provided by Project Peach Inc., doing business as Soba AI ("Soba", "we", "us"). By creating an account, running a pilot, or otherwise using Soba, you ("the customer", "you") agree to these terms on behalf of your business. If you have signed an order form or pilot agreement with us, that document controls where it differs from these terms.</p>
 
@@ -624,7 +626,7 @@ label.framer-68cn0z,label.framer-23uauw{display:none!important}
 <p>These terms are governed by the laws of the State of Delaware, and any dispute will be resolved in the state or federal courts located in Delaware, unless your order form says otherwise. If part of these terms is unenforceable, the rest stays in effect. Neither party may assign these terms without the other's consent, except to a successor in a merger or sale of the business. These terms, together with your order form or pilot agreement and our privacy and messaging policies, are the whole agreement between us about Soba.</p>
 
 <h2>15. Contact</h2>
-<p>Project Peach Inc., a Delaware corporation, doing business as Soba AI.<br><a href="mailto:hello@usesoba.com">Send us an email</a> or <a href="sms:+14808198035">text us</a>.</p></template><script defer src="/_vercel/insights/script.js"></script></head>
+<p>Project Peach Inc., a Delaware corporation, doing business as Soba AI.<br><a href="mailto:hello@usesoba.com">Send us an email</a> or <a href="sms:+14808198035">text us</a>.</p></template><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><script defer src="/_vercel/insights/script.js"></script></head>
 <body>
 	<script async src="https://events.framer.com/script?v=2" data-fid="3d58e3fe0f86490d50175929f54e5fb51a4769e67529d30864ef8c9180f4db86" data-no-nt></script>
 	<!-- Start of bodyStart -->
@@ -932,7 +934,8 @@ function contactForm(){
     else { if(btn){ btn.disabled=false; btn.style.opacity=''; } location.href='mailto:hello@usesoba.com?subject='+encodeURIComponent('Soba: '+data.name)+'&body='+encodeURIComponent([data.name,data.email,data.kind,data.orders,'',data.message].join('\n')); }
   },true);
 }
-function all(){ try{ heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
+function icons(){ document.querySelectorAll('link[rel="icon"][href*="framerusercontent"],link[rel="apple-touch-icon"][href*="framerusercontent"]').forEach(l=>l.remove()); }
+function all(){ try{ icons(); heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
 window.sobaLayer=all;
 /* Framer 'appear' sometimes never fires for a variant (seen on the contact page's phone layout): after load, reveal anything still at its pre-animation opacity inside the viewport. Below-the-fold scroll reveals stay as they are. */
 function appearFallback(){ document.querySelectorAll('[style*="opacity: 0.001"],[style*="opacity:0.001"]').forEach(e=>{ const r=e.getBoundingClientRect(); if(r.bottom>0&&r.top<innerHeight&&r.width>0&&parseFloat(getComputedStyle(e).opacity)<0.01){ e.style.opacity='1'; e.style.transform='none'; } }); }

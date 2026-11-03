@@ -377,4 +377,6 @@ label.framer-68cn0z,label.framer-23uauw{display:none!important}
 .sb-legal a{color:#0099FF;text-decoration:none}.sb-legal a:hover{text-decoration:underline}
 .sb-legal .muted{color:#6b6b6b;font-size:15px}.sb-legal strong{color:#0B1A2B;font-weight:600}
 @media(max-width:700px){.sb-legal{font-size:16px;padding:0 20px 64px}.sb-legal h2{font-size:21px}}
+/* 404 */
+.sb-404{display:flex;gap:14px;justify-content:center;align-items:center;font-size:17px;margin:0 0 40px}.sb-404 a{color:#0B1A2B;font-weight:600;text-decoration:none;border-bottom:1.5px solid #0099FF}.sb-404 span{color:#aaa}
 

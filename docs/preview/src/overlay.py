@@ -4,19 +4,24 @@ import re, html, json, urllib.parse, pathlib
 import os
 ROOT = pathlib.Path(__file__).parent
 import sys, subprocess, shutil
-PAGES = ['home', 'contact', 'privacy', 'terms', 'messaging']
+PAGES = ['home', 'contact', 'privacy', 'terms', 'messaging', '404']
 PAGE = sys.argv[1] if len(sys.argv) > 1 else 'home'
 if PAGE == 'all':
     for pg in PAGES: subprocess.run([sys.executable, __file__, pg], check=True)
     sys.exit(0)
-LEGAL = PAGE in ('privacy', 'terms', 'messaging')
+LEGAL = PAGE in ('privacy', 'terms', 'messaging', '404')
 SRC = 'mirror.html' if PAGE == 'home' else 'mirror-contact.html'
 OUT = {'home': 'v1.html', 'contact': 'contact.html'}.get(PAGE, PAGE + '.html')
 SITE = ROOT.parent.parent  # docs/
 DEPLOY = SITE/('index.html' if PAGE == 'home' else OUT)
 h = (ROOT/SRC).read_text(encoding="utf-8")
 LEGAL_HTML = LEGAL_H1 = LEGAL_DATE = LEGAL_DESC = None
-if LEGAL:
+if PAGE == '404':
+    LEGAL_DESC = 'That page moved or never existed.'
+    LEGAL_H1 = 'Nothing here.'
+    LEGAL_DATE = 'That page moved or never existed.'
+    LEGAL_HTML = '<p class="sb-404"><a href="/">Back to the home page</a><span>&middot;</span><a href="/contact">Contact us</a></p>'
+elif LEGAL:
     lsrc = (SITE/'src'/(PAGE + '.html')).read_text(encoding='utf-8')
     LEGAL_DESC = re.search(r'<meta name="description" content="([^"]*)"', lsrc).group(1)
     LEGAL_H1 = re.search(r'<h1>(.*?)</h1>', lsrc, re.S).group(1).strip()
@@ -24,7 +29,7 @@ if LEGAL:
     body = lsrc[lsrc.find('</p>', lsrc.find('<p class="muted">')) + 4:]
     body = body[:body.rfind('</main>')] if '</main>' in body else body
     LEGAL_HTML = body.strip()
-TITLE = {'home': 'Soba - Revenue solutions for produce companies', 'contact': 'Contact - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
+TITLE = {'home': 'Soba - Revenue solutions for produce companies', 'contact': 'Contact - Soba', '404': 'Page not found - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
 OGTITLE = {'home': 'Soba. Your sales desk now answers 24/7', 'contact': 'Contact Soba'}.get(PAGE, TITLE)
 CANON = 'https://usesoba.com/' + ('' if PAGE == 'home' else PAGE)
 
@@ -137,7 +142,7 @@ MAP = [
  ("Nexura", "soba"),
 ]
 if PAGE == 'contact': MAP = CONTACT_MAP + MAP
-if LEGAL: MAP = [("Contact", "Legal"), ("Start the conversation. We're ready to help.", LEGAL_H1), ("Let's talk about what intelligent automation can do for your business. Tell us where you're at and we'll figure out the rest.", LEGAL_DATE)] + CONTACT_MAP + MAP
+if LEGAL: MAP = [("Contact", "404" if PAGE == '404' else "Legal"), ("Start the conversation. We're ready to help.", LEGAL_H1), ("Let's talk about what intelligent automation can do for your business. Tell us where you're at and we'll figure out the rest.", LEGAL_DATE)] + CONTACT_MAP + MAP
 MAP = [(a, b) for a, b in MAP if a != b]
 
 # ---- HTML pre-pass (first paint)
@@ -248,6 +253,9 @@ if LEGAL:
     style += '<style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style>'
     style += '<template id="sb-legal-src">' + LEGAL_HTML + '</template>'
     h = re.sub(r'(<(?:div|section)[^>]*data-framer-name="Form Section")', lambda m: '<section id="sb-legal" class="sb-legal">' + LEGAL_HTML + '</section>' + m.group(1), h, count=1)
+h = re.sub(r'<link rel="(?:icon|apple-touch-icon)"[^>]*framerusercontent[^>]*>', '', h)
+style += '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">'
+if PAGE == '404': style += '<meta name="robots" content="noindex">'
 style += '<script defer src="/_vercel/insights/script.js"></script>'
 h = h.replace('</head>', style + '</head>', 1)
 script = '<script id="soba-page">window.SB_PAGE=%s;window.SB_TITLE=%s;</script>' % (json.dumps(PAGE), json.dumps(TITLE)) + script
