@@ -15,6 +15,7 @@ import { validTimeZone } from "@/lib/time";
 import { placeForwardingTest } from "@/lib/providers/twilio";
 import { sendToRep } from "@/lib/messaging";
 import { toE164 } from "@/lib/requests";
+import { syncIntakeAgentQuietly } from "@/lib/agents";
 
 async function ctx() {
   const customer = await panelCustomer();
@@ -160,6 +161,7 @@ export async function saveCompany(form: FormData) {
   const { customer, db } = await ctx();
   const tz = str(form, "timezone");
   await db.update(schema.customers).set({ name: str(form, "name") || customer.name, timezone: tz && validTimeZone(tz) ? tz : customer.timezone }).where(eq(schema.customers.id, customer.id));
+  await syncIntakeAgentQuietly(db, customer.id);
   revalidatePath("/panel", "layout");
 }
 
@@ -200,6 +202,7 @@ export async function saveVoice(form: FormData) {
     spanish: on(form, "spanish"), quotePrices: on(form, "quotePrices"), timingPromises: on(form, "timingPromises"), urgentRing: on(form, "urgentRing"),
     businessInfo: str(form, "businessInfo"),
   }).where(eq(schema.settings.customerId, customer.id));
+  await syncIntakeAgentQuietly(db, customer.id);
   revalidatePath("/panel/settings");
 }
 

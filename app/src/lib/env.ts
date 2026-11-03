@@ -25,6 +25,8 @@ export const env = {
     get toolSecret() { return need("ELEVENLABS_TOOL_SECRET"); },
     /** Agent used for callbacks to buyers (reads the rep's exact offer). */
     get callbackAgentId() { return need("ELEVENLABS_CALLBACK_AGENT_ID"); },
+    /** Intake template to duplicate per customer; found by name when unset. */
+    get intakeTemplateId() { return process.env.ELEVENLABS_INTAKE_TEMPLATE_ID ?? null; },
   },
   email: {
     get resendKey() { return need("RESEND_API_KEY"); },

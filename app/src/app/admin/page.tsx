@@ -6,7 +6,7 @@ import { desc } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { isAdmin } from "@/lib/auth";
 import { env } from "@/lib/env";
-import { createCustomer, setStatus, rotateToken, addLine, addDemoData } from "./actions";
+import { createCustomer, setStatus, rotateToken, addLine, addDemoData, syncAgent } from "./actions";
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ key?: string }> }) {
   const { key } = await searchParams;
@@ -27,12 +27,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
               <tr key={c.id}>
                 <td><b>{c.name}</b><div className="hint">{c.timezone} · {c.plan}</div></td>
                 <td><span className={"st " + (c.status === "live" ? "approved" : c.status === "paused" ? "rejected" : "progress")}>{c.status}</span></td>
-                <td className="small">{lines.filter((l) => l.customerId === c.id).map((l) => <div key={l.id}>{l.kind}: {l.twilioNumber}{l.companyNumber ? ` ← ${l.companyNumber}` : ""}</div>)}
+                <td className="small">{lines.filter((l) => l.customerId === c.id).map((l) => <div key={l.id}>{l.kind}: {l.twilioNumber}{l.companyNumber ? ` ← ${l.companyNumber}` : ""}{l.elevenAgentId ? <span className="hint"> · agent {l.elevenAgentId.slice(-8)}{l.elevenPhoneNumberId ? " · phone linked" : ""}</span> : null}</div>)}
                   <form action={addLine} className="row" style={{ marginTop: 6, flexWrap: "wrap" }}><input type="hidden" name="customerId" value={c.id} /><select name="kind" defaultValue="voice"><option value="voice">voice</option><option value="text">text</option></select><input name="twilioNumber" placeholder="+1520…" style={{ width: 130 }} required /><input name="companyNumber" placeholder="company # (voice)" style={{ width: 140 }} /><input name="elevenAgentId" placeholder="agent id" style={{ width: 110 }} /><input name="elevenPhoneNumberId" placeholder="phone id" style={{ width: 110 }} /><button className="btn ghost sm">Add line</button></form></td>
                 <td className="small">{members.filter((m) => m.customerId === c.id).map((m) => <div key={m.id}>{m.name} {m.cell}{m.whatsappOptedIn ? " ✓" : ""}</div>)}</td>
                 <td>{counts.filter((r) => r.customerId === c.id).length}</td>
                 <td className="small">{c.panelToken ? <code>{env.appUrl}/p/{c.panelToken}</code> : "none"}<form action={rotateToken} style={{ marginTop: 4 }}><input type="hidden" name="customerId" value={c.id} /><button className="btn ghost sm">New link</button></form></td>
-                <td><div className="row" style={{ flexWrap: "wrap" }}><form action={setStatus}><input type="hidden" name="customerId" value={c.id} /><button className="btn sm" name="status" value={c.status === "live" ? "paused" : "live"}>{c.status === "live" ? "Pause" : "Go live"}</button></form><form action={addDemoData}><input type="hidden" name="customerId" value={c.id} /><button className="btn ghost sm" title="Two nights of made-up traffic so the panel can be shown; does nothing twice">Add demo data</button></form></div></td>
+                <td><div className="row" style={{ flexWrap: "wrap" }}><form action={setStatus}><input type="hidden" name="customerId" value={c.id} /><button className="btn sm" name="status" value={c.status === "live" ? "paused" : "live"}>{c.status === "live" ? "Pause" : "Go live"}</button></form><form action={addDemoData}><input type="hidden" name="customerId" value={c.id} /><button className="btn ghost sm" title="Two nights of made-up traffic so the panel can be shown; does nothing twice">Add demo data</button></form><form action={syncAgent}><input type="hidden" name="customerId" value={c.id} /><button className="btn ghost sm" title="Creates the customer's ElevenLabs intake agent from the template, or refreshes it from their Settings">{lines.some((l) => l.customerId === c.id && l.elevenAgentId) ? "Refresh agent" : "Create agent"}</button></form></div></td>
               </tr>
             ))}
           </tbody></table></div>
