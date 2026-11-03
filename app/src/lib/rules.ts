@@ -28,7 +28,8 @@ export function resolveUntil(phrase: string, now: Date, timeZone: string): Date 
   const day = WEEKDAY.findIndex((d) => p.includes(d)) >= 0 ? WEEKDAY.findIndex((d) => p.includes(d)) : (["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"].findIndex((d) => p.includes(d)));
   const time = p.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
   if (day < 0 && !time) return null;
-  let hour = time ? Number(time[1]) : 7, minute = time?.[2] ? Number(time[2]) : 0;
+  let hour = time ? Number(time[1]) : 7;
+  const minute = time?.[2] ? Number(time[2]) : 0;
   if (time?.[3] === "pm" && hour < 12) hour += 12;
   if (time?.[3] === "am" && hour === 12) hour = 0;
   // Walk forward in 15-minute steps until the local weekday and time match.
@@ -43,19 +44,21 @@ export function resolveUntil(phrase: string, now: Date, timeZone: string): Date 
   return null;
 }
 
-/** One typed rule line: product words, a price, a case count. Returns null when it is not a rule. */
+/**
+ * One typed rule line: product words, a price, a case count, e.g. "4x4 VR 8.50 600",
+ * "red bells XL 25 lb 11.00 300". The size (4x4) and pack weight (25 lb) are removed
+ * first so their digits are never read as a price or a count. Returns null when it is not a rule.
+ */
 function parseRuleLine(line: string): ParsedRule | null {
   const product = normalizeProduct(line);
-  const nums = Array.from(line.matchAll(/\$?\b(\d{1,4}(?:\.\d{1,2})?)\b/g)).map((m) => m[1]).filter((n) => !/^[3-7]$/.test(n) || !/\b[3-7]\s*x\s*[3-7]\b/i.test(line));
-  const sizeToken = line.match(/\b([3-7])\s*x\s*([3-7])\b/i);
-  const candidates = nums.filter((n) => !(sizeToken && (n === sizeToken[1] || n === sizeToken[2]) && line.indexOf(n) >= line.indexOf(sizeToken[0]) && line.indexOf(n) < line.indexOf(sizeToken[0]) + sizeToken[0].length));
+  const size = normalizeSize(line);
   const pack = normalizePack(line);
-  const lbNum = line.match(/\b(\d{1,2})\s*(?:lb|lbs|pound|pounds)\b/i)?.[1];
-  const rest = candidates.filter((n) => n !== lbNum || candidates.filter((x) => x === n).length > 1);
-  const price = rest.map(Number).find((n) => n > 0.5 && n < 200 && (String(n).includes(".") || n < 60));
-  const cases = rest.map(Number).find((n) => Number.isInteger(n) && n >= 10 && n !== price);
+  const rest = line.replace(/\b[3-7]\s*(?:x|by|por)\s*[3-7]\b/i, " ").replace(/\b\d{1,2}\s*(?:lb|lbs|pound|pounds|libras?)\b/i, " ");
+  const nums = Array.from(rest.matchAll(/\$?(\d{1,5}(?:\.\d{1,2})?)/g)).map((m) => Number(m[1]));
+  const price = nums.find((n) => n > 0.5 && n < 200 && (!Number.isInteger(n) || n < 60));
+  const cases = nums.find((n) => Number.isInteger(n) && n >= 10 && n !== price);
   if (!product || price == null || cases == null) return null;
-  return { product, size: normalizeSize(line), pack, minPrice: price, caseLimit: cases };
+  return { product, size, pack, minPrice: price, caseLimit: cases };
 }
 
 /** Recognizes the WhatsApp price commands. Anything else returns null and is treated as a card reply. */
@@ -141,8 +144,8 @@ export async function lastNightsRules(db: Db, customerId: string, now: Date): Pr
   const [latest] = await db.select().from(schema.priceRules).where(and(eq(schema.priceRules.customerId, customerId), lt(schema.priceRules.expiresAt, now))).orderBy(desc(schema.priceRules.liveFrom)).limit(1);
   if (!latest) return [];
   const windowStart = new Date(latest.liveFrom.getTime() - 12 * 60 * 60 * 1000);
-  const rows = await db.select().from(schema.priceRules).where(and(eq(schema.priceRules.customerId, customerId), lt(schema.priceRules.expiresAt, now), gt(schema.priceRules.liveFrom, windowStart)));
-  const seen = new Map<string, ParsedRule>();
+  const rows = await db.select().from(schema.priceRules).where(and(eq(schema.priceRules.customerId, customerId), lt(schema.priceRules.expiresAt, now), gt(schema.priceRules.liveFrom, windowStart))).orderBy(schema.priceRules.liveFrom);
+  const seen = new Map<string, ParsedRule>(); // later rows win, so a mid-night correction beats the original
   for (const r of rows) seen.set(`${r.product}|${r.size}|${r.pack}`, { product: r.product, size: r.size, pack: r.pack, minPrice: Number(r.minPrice), caseLimit: r.caseLimit });
   return Array.from(seen.values());
 }

@@ -5,19 +5,31 @@ import { and, desc, eq, gt, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import type { ExtractedRequest, ResolvedLine } from "./extract";
-import { decideAutoClear, type LiveRule, type AutoClearResult } from "./autoclear";
+import { decideAutoClear, ruleMatches, type LiveRule, type AutoClearResult } from "./autoclear";
 
 export const FIRST_REF = 1001;
 export const REPEAT_WINDOW_MS = 3 * 60 * 60 * 1000;
 
-export const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "").replace(/^1(\d{10})$/, "$1");
-export const toE164 = (s: string | null | undefined) => { const d = digits(s); return d.length === 10 ? `+1${d}` : d ? `+${d}` : null; };
+export type Extracted = ExtractedRequest & { resolvedLines: ResolvedLine[] };
 
+/** Digits only; a leading US country code is dropped so 1-312… and 312… match. */
+export const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "").replace(/^1(\d{10})$/, "$1");
+/** E.164 for US/Canada (10 digits) and anything longer with its own country code; shorter is not a phone number. */
+export const toE164 = (s: string | null | undefined): string | null => {
+  const d = digits(s);
+  if (d.length === 10) return `+1${d}`;
+  if (d.length >= 11 && d.length <= 15) return `+${d}`;
+  return null;
+};
+
+/** Next reference for a customer. The unique index catches a race; the caller retries. */
 async function nextRef(db: Db, customerId: string): Promise<number> {
   const [row] = await db.select({ max: sql<number>`coalesce(max(${schema.requests.ref}), ${FIRST_REF - 1})` })
     .from(schema.requests).where(eq(schema.requests.customerId, customerId));
   return Number(row.max) + 1;
 }
+
+const isUniqueViolation = (err: unknown) => /unique|duplicate key/i.test(String((err as { message?: string })?.message ?? err));
 
 export async function findOrCreateBuyer(db: Db, customerId: string, x: Pick<ExtractedRequest, "callerName" | "callerCompany" | "callerCity" | "callbackNumber">) {
   const phone = toE164(x.callbackNumber);
@@ -52,10 +64,26 @@ export async function findRecentOpenRequest(db: Db, customerId: string, callback
   return rows[0] ?? null;
 }
 
+/** The request already created for this provider conversation (mid-call booking), if any. */
+export async function findByConversation(db: Db, customerId: string, providerConversationId: string | null | undefined) {
+  if (!providerConversationId) return null;
+  const [r] = await db.select().from(schema.requests).where(and(eq(schema.requests.customerId, customerId), eq(schema.requests.providerConversationId, providerConversationId)));
+  return r ?? null;
+}
+
+/** Flags the card needs beyond what the extractor set. */
+export function derivedFlags(x: Extracted, isNewBuyer: boolean, isTest = false): string[] {
+  const flags = new Set<string>(x.flags);
+  if (isNewBuyer) flags.add("new_buyer");
+  if (isTest) flags.add("test");
+  if (x.resolvedLines.some((l) => !l.productCanonical)) flags.add("not_on_sheet");
+  if (!toE164(x.callbackNumber) || x.callbackPermission === false) flags.add("no_callback");
+  return Array.from(flags);
+}
+
 export type CreateRequestInput = {
-  customerId: string; channel: "call" | "text"; now: Date;
-  extracted: ExtractedRequest & { resolvedLines: ResolvedLine[] };
-  providerConversationId?: string; transcriptUrl?: string;
+  customerId: string; channel: "call" | "text"; now: Date; extracted: Extracted;
+  providerConversationId?: string; transcriptUrl?: string; isTest?: boolean;
 };
 
 export async function createRequest(db: Db, input: CreateRequestInput) {
@@ -67,31 +95,40 @@ export async function createRequest(db: Db, input: CreateRequestInput) {
     const flags = Array.from(new Set([...repeat.flags, "repeat_caller"]));
     await db.update(schema.requests).set({ flags }).where(eq(schema.requests.id, repeat.id));
     await db.insert(schema.events).values({ customerId, requestId: repeat.id, type: "request.repeat_contact", payload: { channel, at: now.toISOString(), summary: x.summary } });
-    return { request: { ...repeat, flags }, merged: true as const, autoClear: null };
+    return { request: { ...repeat, flags }, merged: true as const };
   }
 
   const { buyer, isNew } = await findOrCreateBuyer(db, customerId, x);
-  const ref = await nextRef(db, customerId);
-  const flags: string[] = [...x.flags];
-  if (isNew) flags.push("new_buyer");
-  if (x.resolvedLines.some((l) => !l.productCanonical)) flags.push("not_on_sheet");
-
-  const [request] = await db.insert(schema.requests).values({
-    customerId, ref, channel, buyerId: buyer.id, receivedAt: now, type: x.type, flags,
-    callerName: x.callerName, callerCompany: x.callerCompany, callbackNumber: phone,
-    callbackPermission: x.callbackPermission, summary: x.summary,
-    providerConversationId: input.providerConversationId, transcriptUrl: input.transcriptUrl,
-  }).returning();
-
-  if (x.resolvedLines.length) {
-    await db.insert(schema.orderLines).values(x.resolvedLines.map((l) => ({
-      requestId: request.id, product: l.productCanonical ?? l.product, size: l.size, pack: l.pack, cases: l.cases,
-      priceOffered: l.priceOffered != null ? l.priceOffered.toFixed(2) : null, pickupDate: l.pickupDate,
-      fulfillment: l.fulfillment, destination: l.destination, poNumber: l.poNumber, notOnSheet: !l.productCanonical,
-    })));
+  const flags = derivedFlags(x, isNew, input.isTest);
+  let request: typeof schema.requests.$inferSelect | undefined;
+  for (let attempt = 0; attempt < 3 && !request; attempt++) {
+    const ref = await nextRef(db, customerId);
+    try {
+      [request] = await db.insert(schema.requests).values({
+        customerId, ref, channel, buyerId: buyer.id, receivedAt: now, type: x.type, flags, language: x.language,
+        callerName: x.callerName, callerCompany: x.callerCompany, callbackNumber: phone,
+        callbackPermission: x.callbackPermission, summary: x.summary, isTest: input.isTest ?? false,
+        providerConversationId: input.providerConversationId, transcriptUrl: input.transcriptUrl,
+      }).returning();
+    } catch (err) {
+      if (!isUniqueViolation(err) || attempt === 2) throw err;
+    }
   }
+  if (!request) throw new Error("could not allocate a reference number");
+  await replaceLines(db, request.id, x.resolvedLines);
   await db.insert(schema.events).values({ customerId, requestId: request.id, type: "request.created", payload: { channel, type: x.type, flags, language: x.language } });
   return { request, merged: false as const, buyer, isNew };
+}
+
+/** Rewrites a request's order lines (used when the post-call transcript refines a mid-call booking attempt). */
+export async function replaceLines(db: Db, requestId: string, lines: ResolvedLine[]) {
+  await db.delete(schema.orderLines).where(eq(schema.orderLines.requestId, requestId));
+  if (!lines.length) return;
+  await db.insert(schema.orderLines).values(lines.map((l) => ({
+    requestId, product: l.productCanonical ?? l.product, size: l.size, pack: l.pack, cases: l.cases,
+    priceOffered: l.priceOffered != null ? l.priceOffered.toFixed(2) : null, pickupDate: l.pickupDate,
+    fulfillment: l.fulfillment, destination: l.destination, poNumber: l.poNumber, notOnSheet: !l.productCanonical,
+  })));
 }
 
 export async function liveRules(db: Db, customerId: string, now: Date): Promise<LiveRule[]> {
@@ -101,8 +138,8 @@ export async function liveRules(db: Db, customerId: string, now: Date): Promise<
 
 /**
  * Decide and, if it clears, apply: bump each rule's sold count with a guarded UPDATE so two
- * buyers at once can't oversell, then mark the request auto-cleared with final prices.
- * Returns the decision; a lost race comes back as condition 4.
+ * buyers at once can't oversell, then mark the request auto-cleared with final prices. All
+ * increments happen in one transaction, so a lost race on the second line rolls back the first.
  */
 export async function tryAutoClear(db: Db, args: {
   requestId: string; customerId: string; lines: ResolvedLine[]; now: Date; offHours: boolean;
@@ -110,28 +147,31 @@ export async function tryAutoClear(db: Db, args: {
 }): Promise<AutoClearResult> {
   const rules = await liveRules(db, args.customerId, args.now);
   const decision = decideAutoClear({ lines: args.lines, rules, settings: args.settings, offHours: args.offHours, now: args.now });
-  if (!decision.clear) {
-    await db.insert(schema.events).values({ customerId: args.customerId, requestId: args.requestId, type: "autoclear.declined", payload: { reason: decision.reason, condition: decision.condition } });
-    return decision;
-  }
-  // Guarded increments: fail if another clear got there first.
-  for (const l of decision.lines) {
-    const updated = await db.update(schema.priceRules)
-      .set({ casesCleared: sql`${schema.priceRules.casesCleared} + ${l.cases}` })
-      .where(and(eq(schema.priceRules.id, l.rule.id), sql`${schema.priceRules.casesCleared} + ${l.cases} <= ${schema.priceRules.caseLimit}`))
-      .returning({ id: schema.priceRules.id });
-    if (!updated.length) {
-      const lost = { clear: false as const, reason: "cases taken by another order moments ago", condition: 4 as const };
-      await db.insert(schema.events).values({ customerId: args.customerId, requestId: args.requestId, type: "autoclear.declined", payload: lost });
-      return lost;
+  const declined = async (d: Extract<AutoClearResult, { clear: false }>) => {
+    await db.insert(schema.events).values({ customerId: args.customerId, requestId: args.requestId, type: "autoclear.declined", payload: { reason: d.reason, condition: d.condition } });
+    return d;
+  };
+  if (!decision.clear) return declined(decision);
+
+  const lost = { clear: false as const, reason: "cases taken by another order moments ago", condition: 4 as const };
+  const applied = await db.transaction(async (tx) => {
+    for (const l of decision.lines) {
+      const updated = await tx.update(schema.priceRules)
+        .set({ casesCleared: sql`${schema.priceRules.casesCleared} + ${l.cases}` })
+        .where(and(eq(schema.priceRules.id, l.rule.id), sql`${schema.priceRules.casesCleared} + ${l.cases} <= ${schema.priceRules.caseLimit}`))
+        .returning({ id: schema.priceRules.id });
+      if (!updated.length) { tx.rollback(); }
     }
-  }
-  const dbLines = await db.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, args.requestId));
-  for (const dl of dbLines) {
-    const match = decision.lines.find((l) => l.rule.product.toLowerCase() === dl.product.toLowerCase() && (!l.rule.size || l.rule.size === dl.size));
-    if (match) await db.update(schema.orderLines).set({ finalPrice: match.price.toFixed(2) }).where(eq(schema.orderLines.id, dl.id));
-  }
-  await db.update(schema.requests).set({ status: "auto_cleared" }).where(eq(schema.requests.id, args.requestId));
+    const dbLines = await tx.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, args.requestId));
+    for (const dl of dbLines) {
+      const line: ResolvedLine = { product: dl.product, productCanonical: dl.notOnSheet ? null : dl.product, size: dl.size, pack: dl.pack, cases: dl.cases, priceOffered: null, pickup: null, pickupDate: null, fulfillment: null, destination: null, poNumber: null };
+      const match = decision.lines.find((l) => ruleMatches(l.rule, line) && l.cases === dl.cases);
+      if (match) await tx.update(schema.orderLines).set({ finalPrice: match.price.toFixed(2) }).where(eq(schema.orderLines.id, dl.id));
+    }
+    await tx.update(schema.requests).set({ status: "auto_cleared" }).where(eq(schema.requests.id, args.requestId));
+    return true;
+  }).catch((err: unknown) => { if (/rollback/i.test(String(err))) return false; throw err; });
+  if (!applied) return declined(lost);
   await db.insert(schema.events).values({ customerId: args.customerId, requestId: args.requestId, type: "autoclear.cleared", payload: { lines: decision.lines.map((l) => ({ rule: l.rule.id, cases: l.cases, price: l.price })) } });
   return decision;
 }

@@ -59,7 +59,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
           </div>
         )}
         {open && takeover && (
-          <div className="stack" style={{ gap: 8, marginTop: 18 }}><div className="small muted">{name(takeover.memberId)} has the buyer's details. How did it go?</div>
+          <div className="stack" style={{ gap: 8, marginTop: 18 }}><div className="small muted">{name(takeover.memberId)} has the buyer&apos;s details. How did it go?</div>
             <div className="acts"><form action={decide}><input type="hidden" name="requestId" value={r.id} /><button className="btn green" name="action" value="won" style={{ width: "100%" }}>Won</button></form><form action={decide}><input type="hidden" name="requestId" value={r.id} /><button className="btn ghost" name="action" value="lost" style={{ width: "100%" }}>Lost</button></form></div></div>
         )}
         {won && (

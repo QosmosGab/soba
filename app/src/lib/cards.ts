@@ -6,7 +6,7 @@ import type { Db } from "@/db";
 import { schema } from "@/db";
 import { cardButtons, cardTemplateVariables, requestCard, afterTap, type CardInput } from "./card";
 import type { ResolvedLine } from "./extract";
-import { sendToRep } from "./messaging";
+import { sendToRep, type RepSend } from "./messaging";
 import { ringRep } from "./providers/twilio";
 import { inngestSend } from "@/inngest/send";
 
@@ -72,12 +72,19 @@ export async function dispatchCard(db: Db, requestId: string, now: Date) {
   const smsBody = `${body}\n\nReply ${buttons.map((b) => b.toUpperCase()).join(", ")}${request.type === "new_order" ? ", a price like 8.50, or plain words" : ""}.`;
   const kind = request.type === "new_order" ? "card" : "card_non_order";
   const variables = cardTemplateVariables(card);
+  const nonOrderVariables = { "1": variables["1"], "2": variables["2"], "3": variables["3"], "4": variables["4"], "5": variables["5"], "6": variables["11"] };
   const sent: string[] = [];
   for (const m of recipients) {
-    const r = await sendToRep(db, m, { customerId: request.customerId, requestId, body, smsBody, now, template: { kind, variables: kind === "card" ? variables : { "1": variables["1"], "2": variables["2"], "3": variables["3"], "4": variables["4"], "5": variables["5"], "6": variables["11"] } } });
-    if (r.channel !== "none") sent.push(m.id);
+    // Only reps allowed to approve get the action buttons; the others see the same card as a notice.
+    const template: RepSend["template"] = kind === "card" && m.canApprove ? { kind: "card", variables } : kind === "card_non_order" ? { kind: "card_non_order", variables: nonOrderVariables } : { kind: "notice" };
+    try {
+      const r = await sendToRep(db, m, { customerId: request.customerId, requestId, body, smsBody: m.canApprove ? smsBody : body, now, template });
+      if (r.channel !== "none") sent.push(m.id);
+    } catch (err) {
+      await db.insert(schema.events).values({ customerId: request.customerId, requestId, type: "message.failed", payload: { memberId: m.id, error: String(err).slice(0, 300) } });
+    }
   }
-  await db.insert(schema.events).values({ customerId: request.customerId, requestId, type: "card.sent", payload: { recipients: sent } });
+  await db.insert(schema.events).values({ customerId: request.customerId, requestId, type: sent.length ? "card.sent" : "card.no_recipients", payload: { recipients: sent } });
   const urgent = request.flags.includes("urgent") || request.flags.includes("insists_on_person");
   if (urgent) {
     const { settings } = await loadCustomer(db, request.customerId);

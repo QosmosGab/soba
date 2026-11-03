@@ -15,6 +15,13 @@ export async function lineByNumber(db: Db, number: string | null) {
   return line ?? null;
 }
 
+/** The line whose ElevenLabs intake agent this is (fallback when the called number is missing). */
+export async function lineByAgent(db: Db, agentId: string | null | undefined) {
+  if (!agentId) return null;
+  const [line] = await db.select().from(schema.lines).where(eq(schema.lines.elevenAgentId, agentId));
+  return line ?? null;
+}
+
 /** A team member by cell, across customers (one WhatsApp number serves every customer). */
 export async function memberByCell(db: Db, cell: string | null) {
   const n = toE164(cell);

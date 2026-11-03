@@ -48,6 +48,8 @@ export const settings = pgTable("settings", {
   noAnswerAction: text().notNull().default("text"), // text | whatsapp | none
   confirmationTemplate: text().notNull().default(
     "{company}: confirmed {cases} cases {product} at ${price}, pickup {pickup}. Ref {ref}. Your order will be entered in our system this morning. Reply here to change."),
+  confirmationTemplateEs: text().notNull().default(
+    "{company}: confirmado {cases} cajas {product} a ${price}, recoger {pickup}. Ref {ref}. Su pedido se captura en nuestro sistema esta mañana. Responda aquí para cambiar."),
   summaryMinutesBefore: integer().notNull().default(15),
   summarySections: jsonb().$type<string[]>().notNull().default(["orders", "rules", "other", "transcripts"]),
   quietNightNote: boolean().notNull().default(true),
@@ -185,8 +187,10 @@ export const requests = pgTable("requests", {
   status: requestStatus().notNull().default("in_progress"),
   summary: text(),                         // one-line summary for non-order types
   claimedById: uuid().references(() => teamMembers.id),
+  claimedAt: ts(),
   decidedById: uuid().references(() => teamMembers.id),
-  takeOverOutcome: text(),                 // won | lost
+  takeOverOutcome: text(),
+  language: text().notNull().default("en"), // en | es | mixed, what the buyer spoke                 // won | lost
   assisted: boolean().notNull().default(false),
   callbackPermission: boolean(),
   transcriptUrl: text(),

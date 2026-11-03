@@ -68,9 +68,14 @@ export async function sendToRep(db: Db, member: Member, s: RepSend): Promise<{ c
     await db.insert(schema.events).values({ customerId: s.customerId, requestId: s.requestId ?? null, type: "message.undeliverable", payload: { memberId: member.id } });
     return { channel: "none", sid: null };
   }
-  const r = await sendSms({ from, to: member.cell, body: s.smsBody ?? s.body });
-  await log("sms", r.sid, s.smsBody ?? s.body);
-  return { channel: "sms", sid: r.sid };
+  try {
+    const r = await sendSms({ from, to: member.cell, body: s.smsBody ?? s.body });
+    await log("sms", r.sid, s.smsBody ?? s.body);
+    return { channel: "sms", sid: r.sid };
+  } catch (err) {
+    await db.insert(schema.events).values({ customerId: s.customerId, requestId: s.requestId ?? null, type: "message.sms_failed", payload: { memberId: member.id, error: String(err).slice(0, 300) } });
+    return { channel: "none", sid: null };
+  }
 }
 
 export async function sendToBuyer(db: Db, b: { customerId: string; requestId?: string | null; threadId?: string | null; to: string; body: string; channel?: "sms" | "whatsapp"; now?: Date }) {

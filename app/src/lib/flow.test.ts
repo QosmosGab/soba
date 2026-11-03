@@ -52,7 +52,7 @@ describe("intake", () => {
     if (r.outcome !== "auto_cleared") return;
     const msgs = await msgsFor(r.requestId);
     const toBuyer = msgs.find((m) => m.party === "desk" && m.direction === "out");
-    expect(toBuyer?.body).toContain("confirmed 200 cases 4x4 Vine-ripe tomatoes 25 lb 2-layer at $8.75, pickup Mon. Ref 1001");
+    expect(toBuyer?.body).toContain("confirmed 200 cases 4x4 Vine-ripe tomatoes 25 lb 2-layer at $8.75, pickup Mon, Nov 9. Ref 1001");
     const orderCards = msgs.filter((m) => m.party === "rep" && m.body?.startsWith("ORDER · ref 1001"));
     expect(orderCards.length).toBeGreaterThan(0);
     expect(orderCards[0].body).toContain("Rule:      200 of 600 cases sold");
@@ -69,7 +69,7 @@ describe("intake", () => {
     const msgs = await msgsFor(r.requestId);
     const cards = msgs.filter((m) => m.party === "rep" && m.body?.includes("NEW REQUEST · ref 1002"));
     expect(new Set(cards.map((m) => m.memberId))).toEqual(new Set([ruben.id, miguel.id]));
-    expect(cards[0].body).toContain("Ana Ruiz · Fresh Way (Toronto) · +17735550111");
+    expect(cards[0].body).toContain("Ana Ruiz · Fresh Way (Toronto) · 773-555-0111");
     expect(sentEvents.some((e) => e.name === "soba/card.sent")).toBe(true);
   });
 
@@ -157,7 +157,7 @@ describe("rep decisions", () => {
     const r = await handleIntake(db, { customerId, channel: "text", transcript: "x", now, extracted: extracted({ callbackNumber: "303-555-0123", callerName: "Joe Park", callerCompany: "North Market" }, [line({ priceOffered: 9, cases: 150, size: "4x5" })]) });
     if (r.outcome !== "card_sent") throw new Error("expected card");
     const a = await handleRepMessage(db, { member: ruben, text: "take", now });
-    expect(a.replies[0]).toBe("It's yours: Joe Park, +13035550123. Reply WON or LOST when it's settled.");
+    expect(a.replies[0]).toBe("It's yours: Joe Park, 303-555-0123. Reply WON or LOST when it's settled.");
     const b = await handleRepMessage(db, { member: ruben, text: "won", now: new Date(now.getTime() + 600_000) });
     expect(b.action).toBe("won");
     const request = await req(r.requestId);
@@ -185,7 +185,7 @@ describe("rep decisions", () => {
     const exec = await executeDecision(db, d.id, new Date(now.getTime() + 130_000));
     expect(exec).toEqual({ done: "counter_texted" });
     const offer = (await msgsFor(r.requestId)).find((m) => m.party === "desk");
-    expect(offer?.body).toBe(`Del Campo Supreme: we can do 200 cases 5x6 Roma tomatoes 25 lb 2-layer at $7.25, pickup Mon (ref ${r.ref}). Reply YES to confirm or NO.`);
+    expect(offer?.body).toBe(`Del Campo Supreme: we can do 200 cases 5x6 Roma tomatoes 25 lb 2-layer at $7.25, pickup Mon, Nov 9 (ref ${r.ref}). Reply YES to confirm or NO.`);
     expect(await handleBuyerOfferReply(db, r.requestId, "Yes", new Date(now.getTime() + 300_000))).toBe("confirmed");
     const request = await req(r.requestId);
     expect(request.status).toBe("approved");

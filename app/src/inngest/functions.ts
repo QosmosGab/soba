@@ -1,7 +1,7 @@
 // Timers: the undo window, card escalation, callback retries, and the nightly
 // clock (same-prices prompt, forwarding test, morning summary) that runs every
 // five minutes and fires whatever is due per customer, idempotently.
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
 import { inngest } from "./client";
 import { getDb, schema } from "@/db";
 import { executeDecision, retryCallback } from "@/lib/callbacks";
@@ -105,6 +105,17 @@ export async function nightlyTick(now = new Date()) {
       for (const m of reps.filter((m) => m.isOnCall || m.isOwner || m.canEditSettings)) await sendToRep(db, m, { customerId: c.id, body: `Forwarding check failed: the test call to ${voice.companyNumber} did not reach the desk. After-hours calls may be going to voicemail. Check your phone system's after-hours forwarding.`, template: { kind: "notice" }, now });
       await mark("forwarding.test_failed", { lineId: voice.id });
       did.push("forwarding_failed");
+    }
+    // Retention: call notes and message bodies older than the setting are scrubbed once a day; amounts and statuses stay.
+    if (!(await doneToday("retention.swept"))) {
+      const cutoff = new Date(now.getTime() - settings.retentionMonths * 30 * 24 * 60 * 60 * 1000);
+      const old = await db.select({ id: schema.requests.id }).from(schema.requests).where(and(eq(schema.requests.customerId, c.id), lt(schema.requests.receivedAt, cutoff), isNotNull(schema.requests.transcript)));
+      if (old.length) {
+        await db.update(schema.requests).set({ transcript: null, transcriptUrl: null }).where(inArray(schema.requests.id, old.map((r) => r.id)));
+        await db.update(schema.messages).set({ body: null }).where(inArray(schema.messages.requestId, old.map((r) => r.id)));
+      }
+      await mark("retention.swept", { scrubbed: old.length });
+      if (old.length) did.push("retention");
     }
     // Morning summary, N minutes before the next opening (today's if we are before it).
     const opening = nextOpening(new Date(now.getTime() - 60 * 60 * 1000), settings.hours, c.timezone, settings.holidays);

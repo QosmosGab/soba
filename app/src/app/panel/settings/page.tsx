@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { panelCustomer } from "@/lib/auth";
 import { DAY_KEYS } from "@/lib/hours";
-import { fillConfirmation } from "@/lib/callbacks";
+import { fillConfirmation } from "@/lib/buyer-text";
 import { saveCompany, addMember, toggleMember, saveHours, saveVoice, saveCallbacks, saveSummary, sendTestSummary, saveLines, testForwarding } from "../actions";
 
 const SECTIONS = [["company", "Company and team"], ["lines", "Phone and text lines"], ["hours", "Hours"], ["voice", "How the desk talks"], ["callbacks", "Callbacks and confirmations"], ["summary", "Morning summary"], ["compliance", "Compliance and billing"], ["tests", "Test calls"]] as const;

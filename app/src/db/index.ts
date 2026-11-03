@@ -4,6 +4,7 @@
 import * as schema from "./schema";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the query-result generic differs between the PGlite and postgres-js drivers
 export type Db = PgDatabase<any, typeof schema>;
 
 // One client per process, kept on globalThis so every bundle Next builds (pages, route

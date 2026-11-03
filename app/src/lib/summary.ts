@@ -64,7 +64,7 @@ export function windowStartFor(opening: Date, hours: Record<string, { open: stri
 }
 
 export async function buildSummary(db: Db, customerId: string, windowStart: Date, windowEnd: Date, now: Date): Promise<SummaryData> {
-  const { customer, settings } = await loadCustomer(db, customerId);
+  const { customer } = await loadCustomer(db, customerId);
   const tz = customer.timezone;
   const reqs = await db.select().from(schema.requests).where(and(eq(schema.requests.customerId, customerId), gte(schema.requests.receivedAt, windowStart), lt(schema.requests.receivedAt, windowEnd), eq(schema.requests.isTest, false)));
   const ids = reqs.map((r) => r.id);

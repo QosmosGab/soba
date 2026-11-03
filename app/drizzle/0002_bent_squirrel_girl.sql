@@ -1,0 +1,3 @@
+ALTER TABLE "requests" ADD COLUMN "claimedAt" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "requests" ADD COLUMN "language" text DEFAULT 'en' NOT NULL;--> statement-breakpoint
+ALTER TABLE "settings" ADD COLUMN "confirmationTemplateEs" text DEFAULT '{company}: confirmado {cases} cajas {product} a ${price}, recoger {pickup}. Ref {ref}. Su pedido se captura en nuestro sistema esta mañana. Responda aquí para cambiar.' NOT NULL;

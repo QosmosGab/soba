@@ -1,7 +1,7 @@
 // Internal admin: onboard a customer (settings, lines, first rep), hand out the
 // panel link, pause or go live. Gated by ADMIN_TOKEN (?key=… once, then a cookie).
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { adminTokenOk, isAdmin, setAdminSession } from "@/lib/auth";
 import { env } from "@/lib/env";

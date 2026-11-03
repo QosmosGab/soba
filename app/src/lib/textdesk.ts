@@ -4,7 +4,7 @@
 // change request; YES/NO after a counter settle the callback.
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import { llm, MODEL } from "./llm";
@@ -12,6 +12,7 @@ import { loadCustomer } from "./cards";
 import { handleIntake } from "./intake";
 import { sendToBuyer } from "./messaging";
 import { handleBuyerOfferReply } from "./callbacks";
+import { buyerText, saysStop } from "./buyer-text";
 import { isOffHours } from "./hours";
 import { toE164 } from "./requests";
 import { dispatchCard } from "./cards";
@@ -65,6 +66,13 @@ export async function handleBuyerText(db: Db, input: BuyerTextInput): Promise<{ 
   const phone = toE164(input.from) ?? input.from;
   const { customer, settings } = await loadCustomer(db, customerId);
 
+  // 0. STOP: record the opt-out on every buyer with this number; Twilio blocks sends on its own.
+  if (saysStop(input.body)) {
+    await db.update(schema.buyers).set({ doNotContact: true }).where(and(eq(schema.buyers.customerId, customerId), sql`${schema.buyers.phones} @> ${JSON.stringify([phone])}::jsonb`));
+    await db.insert(schema.events).values({ customerId, type: "buyer.opted_out", payload: { phone } });
+    return { action: "opted_out" };
+  }
+
   // 1. A YES/NO to a pending offer (counter by text, or the no-answer text).
   const pendingOffers = await db.select({ requestId: schema.callbacks.requestId }).from(schema.callbacks).innerJoin(schema.requests, eq(schema.requests.id, schema.callbacks.requestId))
     .where(and(eq(schema.requests.customerId, customerId), eq(schema.requests.callbackNumber, phone), eq(schema.callbacks.outcome, "pending"), eq(schema.requests.status, "in_progress")))
@@ -78,7 +86,7 @@ export async function handleBuyerText(db: Db, input: BuyerTextInput): Promise<{ 
     await db.update(schema.callbacks).set({ outcome: "changed", notes: input.body }).where(and(eq(schema.callbacks.requestId, request.id), eq(schema.callbacks.outcome, "pending")));
     await db.update(schema.requests).set({ claimedById: null, decidedById: null, flags: Array.from(new Set([...request.flags, "changed"])), summary: `Buyer replied to the offer: ${input.body}` }).where(eq(schema.requests.id, request.id));
     await dispatchCard(db, request.id, now);
-    await sendToBuyer(db, { customerId, requestId: request.id, to: phone, body: `${customer.name}: got it, passing that to the team.`, now });
+    await sendToBuyer(db, { customerId, requestId: request.id, to: phone, body: buyerText.passedOn(customer.name, request.language === "es" ? "es" : "en"), now });
     return { action: "offer_changed", requestId: request.id };
   }
 
@@ -100,7 +108,14 @@ export async function handleBuyerText(db: Db, input: BuyerTextInput): Promise<{ 
   const rules = offHours && settings.quotePrices
     ? (await db.select().from(schema.priceRules).where(and(eq(schema.priceRules.customerId, customerId), gt(schema.priceRules.expiresAt, now), eq(schema.priceRules.on, true)))).map((r) => `${[r.size, r.product, r.pack].filter(Boolean).join(" ")} $${Number(r.minPrice).toFixed(2)}/case`)
     : [];
-  const turn = await deskTextTurn(msgs, { customer: customer.name, timezone: customer.timezone, rules, quotePrices: settings.quotePrices, now, priorRef });
+  let turn: Awaited<ReturnType<typeof deskTextTurn>>;
+  try {
+    turn = await deskTextTurn(msgs, { customer: customer.name, timezone: customer.timezone, rules, quotePrices: settings.quotePrices, now, priorRef });
+  } catch (err) {
+    // The model is down: don't leave the buyer hanging, and hand the thread to the reps as is.
+    await db.insert(schema.events).values({ customerId, type: "textdesk.failed", payload: { threadId: thread.id, error: String(err).slice(0, 500) } });
+    turn = { reply: /[áéíóñ¿¡]|\b(hola|cajas|buenas)\b/i.test(input.body) ? "Recibido. El equipo le responde en breve." : "Got it. The team will get back to you shortly.", complete: true, type: "other", language: "en" };
+  }
   await sendToBuyer(db, { customerId, threadId: thread.id, to: phone, body: turn.reply, now });
   if (!turn.complete) return { action: "asked" };
 

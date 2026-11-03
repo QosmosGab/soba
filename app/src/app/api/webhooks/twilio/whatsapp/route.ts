@@ -29,8 +29,12 @@ export async function POST(req: Request) {
   const payload = params.ButtonPayload ?? null;
   const fresh = await recordInbound(db, { customerId: member.customerId, direction: "in", party: "rep", channel: "whatsapp", body, buttonPayload: payload, providerId: params.MessageSid, memberId: member.id, sentAt: now });
   if (!fresh) return twiml();
-  if (!member.whatsappOptedIn) await db.update(schema.teamMembers).set({ whatsappOptedIn: true }).where(eq(schema.teamMembers.id, member.id));
   const reply = (text: string) => sendToRep(db, member, { customerId: member.customerId, body: text, template: { kind: "notice" }, now });
+  if (!member.whatsappOptedIn) {
+    await db.update(schema.teamMembers).set({ whatsappOptedIn: true }).where(eq(schema.teamMembers.id, member.id));
+    await db.insert(schema.events).values({ customerId: member.customerId, type: "member.opted_in", payload: { memberId: member.id } });
+    if (!payload && /^(ok|okay|yes|si|sí|join|start|hi|hello|hola)\b/i.test(body)) { await reply(`You're in, ${member.name}. Order requests will come here; reply with a tap or plain words like "yes", "8.50 max 200" or "take".`); return twiml(); }
+  }
 
   try {
     const thread = await getThread(db, member.id);

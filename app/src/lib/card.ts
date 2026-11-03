@@ -22,8 +22,18 @@ export type CardInput = {
 
 const FLAG_WORDS: Record<string, string> = {
   incomplete: "incomplete", unclear: "unclear", not_on_sheet: "not on sheet", wants_quote: "wants a quote",
-  urgent: "URGENT", insists_on_person: "wants a person", repeat_caller: "called again",
+  urgent: "URGENT", insists_on_person: "wants a person", repeat_caller: "called again", no_callback: "no callback",
+  changed: "buyer changed it", test: "TEST CALL", reminder: "reminder",
 };
+// new_buyer is shown on the panel, not on the card; the card has room for what changes the decision.
+const HIDDEN_FLAGS = new Set(["new_buyer"]);
+
+/** +13125550142 → 312-555-0142; other countries keep E.164. */
+export function fmtPhone(n: string | null | undefined): string {
+  if (!n) return "";
+  const m = n.match(/^\+1(\d{3})(\d{3})(\d{4})$/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : n;
+}
 
 export function fmtTime(d: Date, timezone: string): string {
   return d.toLocaleString("en-US", { timeZone: timezone, weekday: "short", hour: "numeric", minute: "2-digit" })
@@ -44,10 +54,10 @@ function fmtPickup(l: ResolvedLine): string {
 
 /** The request card. Returns the plain text body; buttons are added by the sender. */
 export function requestCard(c: CardInput): string {
-  const who = [c.callerName, c.callerCompany ? `${c.callerCompany}${c.callerCity ? ` (${c.callerCity})` : ""}` : null, c.callbackNumber]
+  const who = [c.callerName, c.callerCompany ? `${c.callerCompany}${c.callerCity ? ` (${c.callerCity})` : ""}` : null, fmtPhone(c.callbackNumber)]
     .filter(Boolean).join(" · ");
   const when = `${c.channel}, ${fmtTime(c.receivedAt, c.timezone)}`;
-  const flags = c.flags.map((f) => FLAG_WORDS[f] ?? f);
+  const flags = c.flags.filter((f) => !HIDDEN_FLAGS.has(f)).map((f) => FLAG_WORDS[f] ?? f);
   if (c.repeatTimes?.length) flags.push(`called ${c.repeatTimes.length + 1} times: ${[...c.repeatTimes, c.receivedAt].map((t) => fmtTime(t, c.timezone)).join(", ")}`);
   const out: string[] = [who, `NEW REQUEST · ref ${c.ref} · ${when}`];
   if (flags.length) out.push(flags.join(" · "));
@@ -85,8 +95,8 @@ export function requestCard(c: CardInput): string {
  */
 export function cardTemplateVariables(c: CardInput): Record<string, string> {
   const one = (s: string) => s.replace(/\s*\n\s*/g, " · ").replace(/\s{2,}/g, " ").trim() || "—";
-  const who = [c.callerName, c.callerCompany ? `${c.callerCompany}${c.callerCity ? ` (${c.callerCity})` : ""}` : null, c.callbackNumber].filter(Boolean).join(" · ");
-  const flags = c.flags.map((f) => FLAG_WORDS[f] ?? f);
+  const who = [c.callerName, c.callerCompany ? `${c.callerCompany}${c.callerCity ? ` (${c.callerCity})` : ""}` : null, fmtPhone(c.callbackNumber)].filter(Boolean).join(" · ");
+  const flags = c.flags.filter((f) => !HIDDEN_FLAGS.has(f)).map((f) => FLAG_WORDS[f] ?? f);
   if (c.repeatTimes?.length) flags.push(`called ${c.repeatTimes.length + 1} times`);
   const join = (f: (l: ResolvedLine) => string) => one(c.lines.map(f).filter(Boolean).join(" | "));
   const isOrder = c.type === "new_order" && c.lines.length > 0;
@@ -111,15 +121,19 @@ export function cardButtons(type: string): Array<"Approve" | "Counter" | "Reject
 }
 
 /** Messages after a tap, from the spec's "After a tap" table. */
+/** "Reply UNDO within 2 minutes to stop.", following the customer's undo setting. */
+export const undoWord = (undoSeconds: number) => `Reply UNDO within ${undoSeconds >= 120 ? `${Math.round(undoSeconds / 60)} minutes` : undoSeconds >= 60 ? "a minute" : `${undoSeconds} seconds`} to stop.`;
+
 export const afterTap = {
-  approve: (buyerFirst: string, cases: number | null, price: number | null, channel: "call" | "text") =>
-    `${channel === "call" ? "Calling" : "Texting"} ${buyerFirst} now to confirm${cases != null ? ` ${cases} cs` : ""}${price != null ? ` at ${fmtMoney(price)}` : ""}. Reply UNDO within 2 minutes to stop.`,
+  undoWord,
+  approve: (buyerFirst: string, cases: number | null, price: number | null, channel: "call" | "text", undo = undoWord(120)) =>
+    `${channel === "call" ? "Calling" : "Texting"} ${buyerFirst} now to confirm${cases != null ? ` ${cases} cs` : ""}${price != null ? ` at ${fmtMoney(price)}` : ""}. ${undo}`,
   counterAsk: () => `Your final price? Reply like "8.50" or "8.50 max 200".`,
-  counterSet: (buyerFirst: string, price: number, maxCases: number | null, channel: "call" | "text") =>
-    `${channel === "call" ? "Calling" : "Texting"} ${buyerFirst} with ${fmtMoney(price)}${maxCases != null ? ` for up to ${maxCases} cs` : ""}, once. Reply UNDO within 2 minutes to stop.`,
+  counterSet: (buyerFirst: string, price: number, maxCases: number | null, channel: "call" | "text", undo = undoWord(120)) =>
+    `${channel === "call" ? "Calling" : "Texting"} ${buyerFirst} with ${fmtMoney(price)}${maxCases != null ? ` for up to ${maxCases} cs` : ""}, once. ${undo}`,
   rejectAsk: () => `Reason for the buyer? (optional) Reply with a reason, or SKIP.`,
   takeOver: (name: string | null, number: string | null) =>
-    `It's yours: ${[name, number].filter(Boolean).join(", ") || "no contact details captured"}. Reply WON or LOST when it's settled.`,
+    `It's yours: ${[name, fmtPhone(number)].filter(Boolean).join(", ") || "no contact details captured"}. Reply WON or LOST when it's settled.`,
   claimed: (repName: string, ref: number, what: string) => `${repName} took ref ${ref}: ${what}.`,
   alreadyTaken: (repName: string) => `Already taken by ${repName}.`,
   acknowledged: () => ``, // "let me think": no reply, logged only

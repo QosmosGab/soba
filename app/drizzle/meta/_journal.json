@@ -15,6 +15,13 @@
       "when": 1793673375322,
       "tag": "0001_real_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793712499139,
+      "tag": "0002_bent_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }
