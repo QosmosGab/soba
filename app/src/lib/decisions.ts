@@ -68,13 +68,13 @@ export type RepMessageResult = { replies: string[]; action: string; requestId: s
  * One inbound message from a rep. `buttonPayload` is the quick-reply id (e.g. "approve:<requestId>")
  * when a button was tapped; `text` is what they typed or the button's label.
  */
-export async function handleRepMessage(db: Db, args: { member: Member; text: string; buttonPayload?: string | null; now: Date }): Promise<RepMessageResult> {
+export async function handleRepMessage(db: Db, args: { member: Member; text: string; buttonPayload?: string | null; now: Date; silent?: boolean }): Promise<RepMessageResult> {
   const { member, now } = args;
   const text = args.text.trim();
   const thread = await getThread(db, member.id);
   const { settings } = await loadCustomer(db, member.customerId);
   const replies: string[] = [];
-  const say = async (body: string, requestId?: string | null) => { replies.push(body); await sendToRep(db, member, { customerId: member.customerId, requestId: requestId ?? null, body, template: { kind: "notice" }, now }); };
+  const say = async (body: string, requestId?: string | null) => { replies.push(body); if (args.silent) return; await sendToRep(db, member, { customerId: member.customerId, requestId: requestId ?? null, body, template: { kind: "notice" }, now }); };
 
   const request = await resolveTargetRequest(db, member, thread, args.buttonPayload ?? null, text);
   const line = request ? (await db.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, request.id)))[0] : null;
@@ -106,6 +106,10 @@ export async function handleRepMessage(db: Db, args: { member: Member; text: str
     if (reply.action === "acknowledged") return { replies, action: "acknowledged", requestId: null };
     await say("No open request is waiting on you right now.");
     return { replies, action: "no_request", requestId: null };
+  }
+  if (request.type !== "new_order" && request.type !== "change" && ["approve", "counter", "reject"].includes(reply.action)) {
+    await say(`Ref ${request.ref} isn't an order (${request.type.replace("_", " ")}). Reply TAKE to take it over.`, request.id);
+    return { replies, action: "not_an_order", requestId: request.id };
   }
   if (!member.canApprove && ["approve", "counter", "reject"].includes(reply.action)) {
     await say(`Your account can't approve orders. Reply TAKE to take ref ${request.ref} over, or ask a manager.`, request.id);

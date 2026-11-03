@@ -164,6 +164,18 @@ describe("rep decisions", () => {
     expect(request.status).toBe("approved"); expect(request.assisted).toBe(true); expect(request.takeOverOutcome).toBe("won");
   });
 
+  it("a typed yes on a non-order card is refused; take over works", async () => {
+    const now = new Date(SUN_2AM.getTime() + 7.5 * 60 * 60 * 1000);
+    const r = await handleIntake(db, { customerId, channel: "call", transcript: "x", now, extracted: extracted({ type: "pickup", callbackNumber: "210-555-0170", callerName: "Pedro Vega", callerCompany: "Rio Grande Foods", summary: "Asks if his truck is loaded" }, []) });
+    if (r.outcome !== "card_sent") throw new Error("expected card");
+    const a = await handleRepMessage(db, { member: miguel, text: "yes", now });
+    expect(a.action).toBe("not_an_order");
+    const b = await handleRepMessage(db, { member: miguel, text: "take", now });
+    expect(b.action).toBe("take_over");
+    await handleRepMessage(db, { member: miguel, text: "lost", now: new Date(now.getTime() + 60_000) });
+    expect((await req(r.requestId)).status).toBe("rejected");
+  });
+
   it("a counter on a text request is texted, and the buyer's YES confirms it", async () => {
     const now = new Date(SUN_2AM.getTime() + 8 * 60 * 60 * 1000);
     const r = await handleIntake(db, { customerId, channel: "text", transcript: "x", now, extracted: extracted({ callbackNumber: "602-555-0150", callerName: "Sara Kim", callerCompany: "Valley Fresh" }, [line({ priceOffered: 6.75, cases: 200, product: "romas", productCanonical: "Roma tomatoes", size: "5x6" })]) });
@@ -173,7 +185,7 @@ describe("rep decisions", () => {
     const exec = await executeDecision(db, d.id, new Date(now.getTime() + 130_000));
     expect(exec).toEqual({ done: "counter_texted" });
     const offer = (await msgsFor(r.requestId)).find((m) => m.party === "desk");
-    expect(offer?.body).toBe("Del Campo Supreme: we can do 200 cases 5x6 Roma tomatoes 25 lb 2-layer at $7.25, pickup Mon (ref 1005). Reply YES to confirm or NO.");
+    expect(offer?.body).toBe(`Del Campo Supreme: we can do 200 cases 5x6 Roma tomatoes 25 lb 2-layer at $7.25, pickup Mon (ref ${r.ref}). Reply YES to confirm or NO.`);
     expect(await handleBuyerOfferReply(db, r.requestId, "Yes", new Date(now.getTime() + 300_000))).toBe("confirmed");
     const request = await req(r.requestId);
     expect(request.status).toBe("approved");

@@ -1,0 +1,51 @@
+{
+  "_comment": "POST each object to https://content.twilio.com/v1/Content (basic auth: account SID / auth token), then request WhatsApp approval. Put the returned HX… SIDs in the env.",
+  "card": {
+    "friendly_name": "soba_request_card",
+    "language": "en",
+    "variables": {
+      "1": "Mike Torres · Lopez Bros (Chicago) · 312-555-0142", "2": "1042", "3": "call, Sun 2:14am", "4": "—",
+      "5": "Vine-ripe tomatoes", "6": "4x4", "7": "25 lb 2-layer", "8": "300 cases", "9": "offers $8.25/case", "10": "Mon · buyer collects", "11": "https://app.usesoba.com/panel/requests/x"
+    },
+    "types": {
+      "twilio/quick-reply": {
+        "body": "{{1}}\nNEW REQUEST · ref {{2}} · {{3}}\n{{4}}\n\nProduct:  {{5}}\nSize:     {{6}}\nPack:     {{7}}\nQty:      {{8}}\nPrice:    {{9}}\nPickup:   {{10}}\n\nTranscript: {{11}}",
+        "actions": [
+          { "title": "Approve", "id": "approve" },
+          { "title": "Counter", "id": "counter" },
+          { "title": "Reject", "id": "reject" },
+          { "title": "Take over", "id": "take_over" }
+        ]
+      }
+    }
+  },
+  "card_non_order": {
+    "friendly_name": "soba_request_card_non_order",
+    "language": "en",
+    "variables": { "1": "Pedro Vega · Rio Grande Foods (San Antonio) · 210-555-0170", "2": "1048", "3": "call, Tue 4:47am", "4": "—", "5": "Asking if his truck is loaded; driver waiting since 6", "6": "https://app.usesoba.com/panel/requests/x" },
+    "types": {
+      "twilio/quick-reply": {
+        "body": "{{1}}\nREQUEST · ref {{2}} · {{3}}\n{{4}}\n\n{{5}}\n\nTranscript: {{6}}",
+        "actions": [{ "title": "Take over", "id": "take_over" }]
+      }
+    }
+  },
+  "notice": {
+    "friendly_name": "soba_notice",
+    "language": "en",
+    "variables": { "1": "Ruben took ref 1042: countered $8.50." },
+    "types": { "twilio/text": { "body": "{{1}}" } }
+  },
+  "same_prices": {
+    "friendly_name": "soba_same_prices",
+    "language": "en",
+    "variables": { "1": "4x4 Vine-ripe tomatoes $8.50 up to 600 · 5x6 Roma tomatoes $7.25 up to 400" },
+    "types": {
+      "twilio/quick-reply": {
+        "body": "Same prices as last night?\n{{1}}\nNo answer means no auto-clear tonight.",
+        "actions": [{ "title": "Yes, same prices", "id": "same" }, { "title": "No", "id": "no" }]
+      }
+    }
+  },
+  "_note_button_ids": "The app reads ButtonPayload as '<action>' or '<action>:<requestId>'. Twilio quick-reply ids are fixed per template, so the request is resolved from the rep's latest open card; the id form with a request uuid is used when the Content API variables allow it."
+}

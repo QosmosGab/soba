@@ -3,6 +3,9 @@
 // happens on the called number (system__called_number), never on forwarded_from.
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { env } from "../env";
+import { randomBytes } from "node:crypto";
+/** Dry-run ids must be unique: provider ids are a unique column. */
+const dryId = () => `${Date.now()}_${randomBytes(3).toString("hex")}`;
 
 let _client: ElevenLabsClient | undefined;
 export function elevenClient() {
@@ -56,7 +59,7 @@ export function transcriptText(e: PostCallEvent): string {
 export async function placeCallback(args: {
   agentId: string; agentPhoneNumberId: string; to: string; variables: Record<string, string | number | boolean>;
 }): Promise<{ conversationId: string | null; callSid: string | null; dryRun: boolean }> {
-  if (env.dryRun) return { conversationId: `dry_conv_${Date.now()}`, callSid: null, dryRun: true };
+  if (env.dryRun) return { conversationId: `dry_conv_${dryId()}`, callSid: null, dryRun: true };
   const r = await elevenClient().conversationalAi.twilio.outboundCall({
     agentId: args.agentId, agentPhoneNumberId: args.agentPhoneNumberId, toNumber: args.to,
     conversationInitiationClientData: { dynamicVariables: args.variables },

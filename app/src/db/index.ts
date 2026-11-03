@@ -6,15 +6,22 @@ import type { PgDatabase } from "drizzle-orm/pg-core";
 
 export type Db = PgDatabase<any, typeof schema>;
 
-let _db: Db | undefined;
+// One client per process, kept on globalThis so every bundle Next builds (pages, route
+// handlers, server actions) shares the same embedded database.
+const g = globalThis as unknown as { __sobaDb?: Db; __sobaDbPromise?: Promise<Db> };
 
 export async function getDb(): Promise<Db> {
-  if (_db) return _db;
+  if (g.__sobaDb) return g.__sobaDb;
+  if (g.__sobaDbPromise) return g.__sobaDbPromise;
+  g.__sobaDbPromise = openDb().then((db) => { g.__sobaDb = db; return db; });
+  return g.__sobaDbPromise;
+}
+
+async function openDb(): Promise<Db> {
   if (process.env.DATABASE_URL) {
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const postgres = (await import("postgres")).default;
-    _db = drizzle(postgres(process.env.DATABASE_URL, { prepare: false }), { schema }) as unknown as Db;
-    return _db;
+    return drizzle(postgres(process.env.DATABASE_URL, { prepare: false }), { schema }) as unknown as Db;
   }
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
@@ -22,12 +29,13 @@ export async function getDb(): Promise<Db> {
   const dataDir = process.env.PGLITE_DIR; // undefined = in-memory (tests)
   const client = dataDir ? new PGlite(dataDir) : new PGlite();
   const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: new URL("../../drizzle", import.meta.url).pathname });
-  _db = db as unknown as Db;
-  return _db;
+  // Resolved from the working directory (app/) so Turbopack does not treat it as an asset import.
+  const path = await import("node:path");
+  await migrate(db, { migrationsFolder: process.env.SOBA_MIGRATIONS_DIR ?? path.join(process.cwd(), "drizzle") });
+  return db as unknown as Db;
 }
 
 /** Tests: drop the cached client so each file gets a fresh in-memory database. */
-export function resetDbForTests() { _db = undefined; }
+export function resetDbForTests() { g.__sobaDb = undefined; g.__sobaDbPromise = undefined; }
 
 export { schema };

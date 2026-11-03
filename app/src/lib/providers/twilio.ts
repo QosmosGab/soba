@@ -3,6 +3,9 @@
 import twilio from "twilio";
 import { validateRequest } from "twilio/lib/webhooks/webhooks";
 import { env } from "../env";
+import { randomBytes } from "node:crypto";
+/** Dry-run ids must be unique: provider ids are a unique column. */
+const dryId = () => `${Date.now()}_${randomBytes(3).toString("hex")}`;
 
 let _client: ReturnType<typeof twilio> | undefined;
 export function twilioClient() {
@@ -13,7 +16,7 @@ export function twilioClient() {
 export type SendResult = { sid: string | null; dryRun: boolean };
 
 export async function sendSms(args: { from: string; to: string; body: string; statusCallback?: string }): Promise<SendResult> {
-  if (env.dryRun) return { sid: `dry_${Date.now()}`, dryRun: true };
+  if (env.dryRun) return { sid: `dry_${dryId()}`, dryRun: true };
   const m = await twilioClient().messages.create({ from: args.from, to: args.to, body: args.body, statusCallback: args.statusCallback });
   return { sid: m.sid, dryRun: false };
 }
@@ -29,7 +32,7 @@ export async function sendWhatsApp(args: {
   template?: { sid: string | null; variables: Record<string, string> } | null;
   statusCallback?: string;
 }): Promise<SendResult> {
-  if (env.dryRun) return { sid: `dry_${Date.now()}`, dryRun: true };
+  if (env.dryRun) return { sid: `dry_${dryId()}`, dryRun: true };
   const to = args.to.startsWith("whatsapp:") ? args.to : `whatsapp:${args.to}`;
   const base = { from: env.twilio.whatsappFrom, to, statusCallback: args.statusCallback };
   const m = args.template?.sid
@@ -68,7 +71,7 @@ export const stripWhatsApp = (n: string) => n.replace(/^whatsapp:/, "");
 
 /** Rings a rep's cell and reads one sentence (urgent requests). From the customer's text line. */
 export async function ringRep(db: import("@/db").Db, customerId: string, to: string, say: string): Promise<SendResult> {
-  if (env.dryRun) return { sid: `dry_call_${Date.now()}`, dryRun: true };
+  if (env.dryRun) return { sid: `dry_call_${dryId()}`, dryRun: true };
   const { textLineNumber } = await import("../messaging");
   const from = await textLineNumber(db, customerId);
   if (!from) return { sid: null, dryRun: false };
@@ -83,7 +86,7 @@ export async function ringRep(db: import("@/db").Db, customerId: string, to: str
  * intake webhook marks the line OK (caller = our number).
  */
 export async function placeForwardingTest(from: string, companyNumber: string): Promise<SendResult> {
-  if (env.dryRun) return { sid: `dry_test_${Date.now()}`, dryRun: true };
+  if (env.dryRun) return { sid: `dry_test_${dryId()}`, dryRun: true };
   const c = await twilioClient().calls.create({ from, to: companyNumber, twiml: `<Response><Say>Soba forwarding test.</Say><Pause length="2"/><Hangup/></Response>`, timeout: 40 });
   return { sid: c.sid, dryRun: false };
 }
