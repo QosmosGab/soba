@@ -6,7 +6,7 @@ import { GoogleGenAI, createPartFromBase64, createUserContent, type Part } from 
 import { z } from "zod";
 
 /** Override with SOBA_MODEL. */
-export const MODEL = process.env.SOBA_MODEL ?? "gemini-2.5-pro";
+export const MODEL = process.env.SOBA_MODEL ?? "gemini-3.1-pro-preview";
 
 let _client: GoogleGenAI | undefined;
 export function llm(): GoogleGenAI {
