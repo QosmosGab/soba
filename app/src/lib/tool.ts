@@ -31,7 +31,7 @@ export const ToolBody = z.object({
   company: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   callback_number: z.string().nullable().optional(),
-  callback_permission: z.coerce.boolean().nullable().optional(),
+  callback_permission: z.union([z.boolean(), z.enum(["true", "false"]).transform((v) => v === "true")]).nullable().optional(),
   language: z.enum(["en", "es", "mixed"]).nullable().optional(),
 });
 export type ToolBody = z.infer<typeof ToolBody>;
@@ -57,7 +57,8 @@ export async function deskTool(db: Db, input: unknown, now: Date): Promise<ToolR
     return { status: 200, body: {
       known_buyer: buyer ? { name: buyer.contactName, company: buyer.company, city: buyer.city, usual_pickup: buyer.usualPickup, do_not_contact: buyer.doNotContact } : null,
       business_info: settings.businessInfo, spanish: settings.spanish, timing_promises: settings.timingPromises,
-      after_hours: offHours, auto_clear_possible: offHours && settings.autoClear && rules.length > 0,
+      after_hours: offHours, desk_answering: settings.answering, daytime_pickup: settings.daytimeOverflow,
+      auto_clear_possible: offHours && settings.answering && settings.autoClear && rules.length > 0,
       tonight_price: settings.quotePrices && rule ? { product: rule.product, size: rule.size, pack: rule.pack, price: Number(rule.minPrice), cases_left: rule.caseLimit - rule.casesCleared, say: `Tonight's price on ${[rule.size, rule.product].filter(Boolean).join(" ")} is ${fmtMoney(Number(rule.minPrice))} a case.` } : null,
       products_on_sheet: Array.from(new Set(rules.map((r) => r.product))),
     } };
@@ -66,7 +67,7 @@ export async function deskTool(db: Db, input: unknown, now: Date): Promise<ToolR
   // try_clear: build the line, create (or update) the request, apply the rules atomically.
   const product = b.product ? normalizeProduct(b.product) : null;
   const ctx = { name: customer.name, timezone: customer.timezone, now };
-  const extractedLine = resolveLine({ product: b.product ?? "", size: b.size ? normalizeSize(b.size) ?? b.size : null, pack: b.pack ? normalizePack(b.pack) ?? b.pack : null, cases: b.cases ?? null, priceOffered: b.price ?? null, pickup: b.pickup ?? null, fulfillment: b.fulfillment ?? "collect", destination: null, poNumber: null }, ctx);
+  const extractedLine = resolveLine({ product: b.product ?? "", size: b.size ? normalizeSize(b.size) ?? b.size : null, pack: b.pack ? normalizePack(b.pack) ?? b.pack : null, cases: b.cases ?? null, priceOffered: b.price ?? null, pickup: b.pickup ?? null, fulfillment: b.fulfillment ?? null, destination: null, poNumber: null }, ctx);
   const extracted: Extracted = {
     type: "new_order", callerName: b.buyer_name ?? null, callerCompany: b.company ?? null, callerCity: b.city ?? null,
     callbackNumber: b.callback_number ?? b.caller_id ?? null, callbackPermission: b.callback_permission ?? null, preferredChannel: "call",

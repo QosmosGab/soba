@@ -102,7 +102,7 @@ export const teamMembers = pgTable("team_members", {
 export const repThreads = pgTable("rep_threads", {
   memberId: uuid().primaryKey().references(() => teamMembers.id, { onDelete: "cascade" }),
   requestId: uuid().references(() => requests.id, { onDelete: "set null" }),
-  state: text().notNull().default("idle"), // idle | awaiting_counter | awaiting_reason | awaiting_clarify | awaiting_sheet_ok | awaiting_same_prices
+  state: text().notNull().default("idle"), // idle | awaiting_counter | awaiting_reason | awaiting_followup | awaiting_sheet_ok | awaiting_same_prices
   pendingSheetId: uuid(),
   updatedAt: ts().notNull().defaultNow(),
 });
@@ -151,6 +151,7 @@ export const priceSheets = pgTable("price_sheets", {
   rawText: text(),
   parsed: jsonb().$type<Array<{ product: string; size: string | null; pack: string | null; minPrice: number; caseLimit: number; note?: string }>>(),
   question: text(),                        // the one clarifying question, if the sheet was unclear
+  expiresAt: ts(),                         // asked-for expiry ("till Mon 7am"), capped at the next opening
   sentById: uuid().references(() => teamMembers.id),
   createdAt: ts().notNull().defaultNow(),
 });
@@ -242,6 +243,7 @@ export const decisions = pgTable("decisions", {
   reason: text(),
   undoDeadline: ts(),
   undone: boolean().notNull().default(false),
+  executedAt: ts(),                        // set by the one run that acts on it; undo and execute can't both win
   createdAt: ts().notNull().defaultNow(),
 });
 

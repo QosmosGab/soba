@@ -1,4 +1,5 @@
 // Pure helpers for the way produce buyers talk. No network, fully unit-tested.
+import { localParts } from "./time";
 
 /** Canonical product names the desk uses, with the words buyers use for them. */
 const PRODUCT_ALIASES: Array<[canonical: string, aliases: RegExp]> = [
@@ -67,11 +68,10 @@ const WEEKDAYS_EN = ["monday", "tuesday", "wednesday", "thursday", "friday", "sa
 const WEEKDAYS_ES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
 const WEEKDAYS_ES_PLAIN = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
 
-function localDate(now: Date, timeZone: string): { y: number; m: number; d: number; weekday: number } {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)!.value;
-  const wd = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(get("weekday"));
-  return { y: Number(get("year")), m: Number(get("month")), d: Number(get("day")), weekday: wd };
+function localDate(now: Date, timeZone: string): { y: number; m: number; d: number; weekday: number; hour: number } {
+  const { isoDate, weekday, hour } = localParts(now, timeZone);
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return { y, m, d, weekday, hour };
 }
 
 function isoPlusDays(y: number, m: number, d: number, add: number): string {
@@ -81,12 +81,13 @@ function isoPlusDays(y: number, m: number, d: number, add: number): string {
 
 /**
  * Turns "Monday", "el lunes", "tomorrow", "mañana", "today", "Thursday" into an ISO date
- * in the customer's time zone. A weekday means the NEXT occurrence (today counts if the
- * desk is closed, which is why "tomorrow" and weekday names never resolve to today).
+ * in the customer's time zone. A weekday means the next occurrence; the same weekday said
+ * before noon means today (a 12:30am Monday call asking for "Monday pickup" means this morning),
+ * said in the afternoon it means next week.
  */
 export function resolvePickupDate(phrase: string, now: Date, timeZone: string): string | null {
   const p = phrase.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const { y, m, d, weekday } = localDate(now, timeZone);
+  const { y, m, d, weekday, hour } = localDate(now, timeZone);
   if (/\b(today|hoy)\b/.test(p)) return isoPlusDays(y, m, d, 0);
   if (/\b(tomorrow|manana)\b/.test(p)) return isoPlusDays(y, m, d, 1);
   const iso = p.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
@@ -94,7 +95,7 @@ export function resolvePickupDate(phrase: string, now: Date, timeZone: string): 
   for (let i = 0; i < 7; i++) {
     if (p.includes(WEEKDAYS_EN[i]) || p.includes(WEEKDAYS_ES_PLAIN[i]) || p.includes(WEEKDAYS_ES[i])) {
       let add = (i - weekday + 7) % 7;
-      if (add === 0) add = 7;
+      if (add === 0 && hour >= 12) add = 7;
       return isoPlusDays(y, m, d, add);
     }
   }

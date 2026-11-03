@@ -10,7 +10,7 @@ export { newToken } from "./provision";
 const COOKIE = "soba_panel";
 const ADMIN_COOKIE = "soba_admin";
 
-const sign = (v: string) => createHmac("sha256", process.env.SESSION_SECRET ?? "soba-dev-secret").update(v).digest("hex").slice(0, 24);
+const sign = (v: string) => createHmac("sha256", env.sessionSecret).update(v).digest("hex").slice(0, 32);
 
 export async function setPanelSession(customerId: string) {
   (await cookies()).set(COOKIE, `${customerId}.${sign(customerId)}`, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 90, secure: process.env.NODE_ENV === "production" });

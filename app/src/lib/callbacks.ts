@@ -2,7 +2,7 @@
 // confirmation, the order card to the rep, and the outcomes that come back
 // from the callback (confirmed, declined, changed, no answer, bought elsewhere).
 // The buyer only ever hears numbers a rep or a price rule approved.
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import { fmtMoney, orderCard } from "./card";
@@ -12,6 +12,8 @@ import { placeCallback } from "./providers/elevenlabs";
 import { buyerText, fillConfirmation, langOf, pickupWord, saysNo, saysYes, type Lang } from "./buyer-text";
 import { env } from "./env";
 import { inngestSend } from "@/inngest/send";
+import { extractRequest } from "./extract";
+import { replaceLines } from "./requests";
 
 type Request = typeof schema.requests.$inferSelect;
 type Line = typeof schema.orderLines.$inferSelect;
@@ -78,7 +80,7 @@ export async function confirmDeal(db: Db, args: {
   const scheduled = args.byMemberId ? members.filter((m) => m.id === args.byMemberId) : await cardRecipients(db, request.customerId, args.now);
   const targets = new Map<string, typeof members[number]>();
   for (const m of [...scheduled, ...members.filter((m) => m.isOrderClerk)]) targets.set(m.id, m);
-  const rules = args.source === "auto" ? await db.select().from(schema.priceRules).where(eq(schema.priceRules.customerId, request.customerId)) : [];
+  const rules = args.source === "auto" ? await db.select().from(schema.priceRules).where(and(eq(schema.priceRules.customerId, request.customerId), gt(schema.priceRules.expiresAt, args.now))) : [];
   for (const l of fresh) {
     const rule = rules.find((r) => r.product.toLowerCase() === l.product.toLowerCase() && (!r.size || r.size === l.size));
     const text = orderCard({
@@ -110,12 +112,14 @@ function callbackVariables(c: { customer: string; request: Request; lines: Line[
  * they used; reject tells them by text, with the rep's reason if any.
  */
 export async function executeDecision(db: Db, decisionId: string, now: Date) {
-  const [decision] = await db.select().from(schema.decisions).where(eq(schema.decisions.id, decisionId));
-  if (!decision || decision.undone) return { skipped: "undone" as const };
+  // One winner between the timer and an UNDO: the guarded update below decides it.
+  const [decision] = await db.update(schema.decisions).set({ executedAt: now }).where(and(eq(schema.decisions.id, decisionId), eq(schema.decisions.undone, false), isNull(schema.decisions.executedAt))).returning();
+  if (!decision) {
+    const [d] = await db.select().from(schema.decisions).where(eq(schema.decisions.id, decisionId));
+    return { skipped: d?.executedAt ? "already_executed" as const : "undone" as const };
+  }
   const [request] = await db.select().from(schema.requests).where(eq(schema.requests.id, decision.requestId));
   if (!request || request.status !== "in_progress") return { skipped: "closed" as const };
-  const already = await db.select().from(schema.callbacks).where(eq(schema.callbacks.decisionId, decision.id));
-  if (already.length) return { skipped: "already_executed" as const };
   const { customer, settings } = await loadCustomer(db, request.customerId);
   const lines = await db.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, request.id));
   const line = lines[0];
@@ -145,7 +149,7 @@ export async function executeDecision(db: Db, decisionId: string, now: Date) {
     return { done: "confirmed_by_text" as const };
   }
   if (request.channel === "text") {
-    const body = buyerText.offer({ company: customer.name, cases, product: orderDesc(lines), price, pickup: pickupWord(line.pickupDate, lang), ref: request.ref }, lang);
+    const body = buyerText.offer({ company: customer.name, cases: lines.length === 1 ? cases : null, product: orderDesc(lines), price: lines.length === 1 ? price : null, pickup: pickupWord(line.pickupDate, lang), ref: request.ref }, lang);
     await sendToBuyer(db, { customerId: request.customerId, requestId: request.id, to: request.callbackNumber, body, now });
     await db.update(schema.callbacks).set({ attempts: 1, lastAttemptAt: now }).where(eq(schema.callbacks.id, cb.id));
     return { done: "counter_texted" as const };
@@ -158,7 +162,20 @@ async function placeBuyerCall(db: Db, a: { request: Request; lines: Line[]; call
   const [voice] = await db.select().from(schema.lines).where(and(eq(schema.lines.customerId, request.customerId), eq(schema.lines.kind, "voice")));
   if (a.textFirst) await sendToBuyer(db, { customerId: request.customerId, requestId: request.id, to: request.callbackNumber!, body: buyerText.callingBack(a.customer, request.ref, a.lang), now: a.now });
   const variables = callbackVariables({ customer: a.customer, request, lines: a.lines, price: a.price, cases: a.cases, intent: a.intent, repName: a.repName, lang: a.lang });
-  const call = await placeCallback({ agentId: env.dryRun ? "dry" : env.eleven.callbackAgentId, agentPhoneNumberId: voice?.elevenPhoneNumberId ?? (env.dryRun ? "dry" : ""), to: request.callbackNumber!, variables });
+  let call: Awaited<ReturnType<typeof placeCallback>>;
+  try {
+    call = await placeCallback({ agentId: env.dryRun ? "dry" : env.eleven.callbackAgentId, agentPhoneNumberId: voice?.elevenPhoneNumberId ?? (env.dryRun ? "dry" : ""), to: request.callbackNumber!, variables });
+  } catch (err) {
+    // The call could not be placed: the offer goes by text instead, and the rep is told.
+    await db.insert(schema.events).values({ customerId: request.customerId, requestId: request.id, type: "callback.failed", payload: { callbackId: a.callbackId, error: String(err).slice(0, 300) } });
+    const body = buyerText.missedYou({ company: a.customer, cases: a.lines.length === 1 ? a.cases : null, product: orderDesc(a.lines), price: a.lines.length === 1 ? a.price : null, pickup: pickupWord(a.lines[0]?.pickupDate ?? null, a.lang), ref: request.ref }, a.lang);
+    await sendToBuyer(db, { customerId: request.customerId, requestId: request.id, to: request.callbackNumber!, body, now: a.now });
+    await db.update(schema.callbacks).set({ channel: "sms", attempts: 2, lastAttemptAt: a.now, notes: "call failed; offer sent by text" }).where(eq(schema.callbacks.id, a.callbackId));
+    const [d] = await db.select().from(schema.callbacks).where(eq(schema.callbacks.id, a.callbackId));
+    const rep = await repOf(db, d?.decisionId ? (await db.select().from(schema.decisions).where(eq(schema.decisions.id, d.decisionId)))[0]?.memberId ?? null : null);
+    if (rep) await sendToRep(db, rep, { customerId: request.customerId, requestId: request.id, body: `Couldn't call ${request.callerName?.split(" ")[0] ?? "the buyer"} on ref ${request.ref}; the offer went by text instead. Reply TAKE to call yourself.`, template: { kind: "notice" }, now: a.now });
+    return { done: "call_failed_texted" as const };
+  }
   await db.update(schema.callbacks).set({ lastAttemptAt: a.now, providerConversationId: call.conversationId }).where(eq(schema.callbacks.id, a.callbackId));
   await db.insert(schema.messages).values({ customerId: request.customerId, requestId: request.id, direction: "out", party: "desk", channel: "voice", body: `Callback (${a.intent}): ${variables.cases} cs ${variables.product} at $${variables.price}`, providerId: call.conversationId, sentAt: a.now });
   await db.insert(schema.events).values({ customerId: request.customerId, requestId: request.id, type: "callback.placed", payload: { callbackId: a.callbackId, intent: a.intent, conversationId: call.conversationId } });
@@ -207,10 +224,8 @@ export async function handleCallbackOutcome(db: Db, conversationId: string, o: C
     case "changed": {
       // Back to the reps as a fresh card on the same reference, flagged with what changed.
       await db.update(schema.callbacks).set({ outcome: "changed", notes: o.changeDetails ?? o.notes ?? null }).where(eq(schema.callbacks.id, cb.id));
-      const flags = Array.from(new Set([...request.flags.filter((f) => f !== "repeat_caller"), "changed"]));
-      await db.update(schema.requests).set({ claimedById: null, claimedAt: null, decidedById: null, flags, summary: `Buyer changed the order on callback: ${o.changeDetails ?? "see notes"}` }).where(eq(schema.requests.id, request.id));
+      await reopenAsChanged(db, request, `Buyer changed the order on the callback: ${o.changeDetails ?? "see notes"}`, o.transcript ?? o.changeDetails ?? null, now);
       await event("callback.changed", { details: o.changeDetails ?? null });
-      await dispatchCard(db, request.id, now);
       return { done: "changed" as const };
     }
     case "no_answer": {
@@ -223,7 +238,8 @@ export async function handleCallbackOutcome(db: Db, conversationId: string, o: C
       if (settings.noAnswerAction !== "none" && request.callbackNumber) {
         const lines = await db.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, request.id));
         const body = buyerText.missedYou({ company: customer.name, cases: cb.offerCases, product: orderDesc(lines), price: cb.offerPrice != null ? Number(cb.offerPrice) : null, pickup: pickupWord(lines[0]?.pickupDate ?? null, lang), ref: request.ref }, lang);
-        await sendToBuyer(db, { customerId: request.customerId, requestId: request.id, to: request.callbackNumber, body, channel: settings.noAnswerAction === "whatsapp" ? "whatsapp" : "sms", now });
+        try { await sendToBuyer(db, { customerId: request.customerId, requestId: request.id, to: request.callbackNumber, body, channel: settings.noAnswerAction === "whatsapp" ? "whatsapp" : "sms", now }); }
+        catch { await sendToBuyer(db, { customerId: request.customerId, requestId: request.id, to: request.callbackNumber, body, channel: "sms", now }); }
         // The text is now the live offer; a YES settles it.
         await db.update(schema.callbacks).set({ outcome: "pending", channel: "sms", attempts: 2, lastAttemptAt: now }).where(eq(schema.callbacks.id, cb.id));
       }
@@ -241,10 +257,30 @@ export async function retryCallback(db: Db, callbackId: string, now: Date) {
   if (!request || request.status !== "in_progress" || !request.callbackNumber) return { skipped: true };
   const decision = cb.decisionId ? (await db.select().from(schema.decisions).where(eq(schema.decisions.id, cb.decisionId)))[0] : null;
   const lines = await db.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, request.id));
-  const { customer, settings } = await loadCustomer(db, request.customerId);
+  const { customer } = await loadCustomer(db, request.customerId);
   const rep = await repOf(db, decision?.memberId ?? null);
   await db.update(schema.callbacks).set({ attempts: 2 }).where(eq(schema.callbacks.id, cb.id));
-  return placeBuyerCall(db, { request, lines, callbackId: cb.id, price: cb.offerPrice != null ? Number(cb.offerPrice) : null, cases: cb.offerCases, intent: decision?.action === "counter" ? "counter" : "confirm", repName: rep?.name ?? null, now, customer: customer.name, textFirst: settings.textFirstBeforeCall, lang: langOf(request.language) });
+  return placeBuyerCall(db, { request, lines, callbackId: cb.id, price: cb.offerPrice != null ? Number(cb.offerPrice) : null, cases: cb.offerCases, intent: decision?.action === "counter" ? "counter" : "confirm", repName: rep?.name ?? null, now, customer: customer.name, textFirst: false, lang: langOf(request.language) });
+}
+
+/**
+ * The buyer asked for something else (on the callback or by text): the order lines are re-read
+ * from what they said, the spent decisions are retired, and the reps get a fresh card marked CHANGED.
+ */
+export async function reopenAsChanged(db: Db, request: Request, summary: string, said: string | null, now: Date) {
+  const { customer } = await loadCustomer(db, request.customerId);
+  if (said) {
+    try {
+      const re = await extractRequest(`${request.transcript ?? ""}\n\n(Later, on the callback or by text, the buyer changed the order:)\n${said}`, { name: customer.name, timezone: customer.timezone, now });
+      if (re.type === "new_order" && re.resolvedLines.length) await replaceLines(db, request.id, re.resolvedLines);
+    } catch (err) {
+      await db.insert(schema.events).values({ customerId: request.customerId, requestId: request.id, type: "change.extract_failed", payload: { error: String(err).slice(0, 300) } });
+    }
+  }
+  await db.update(schema.decisions).set({ undone: true }).where(and(eq(schema.decisions.requestId, request.id), eq(schema.decisions.undone, false)));
+  const flags = Array.from(new Set([...request.flags.filter((f) => f !== "repeat_caller"), "changed"]));
+  await db.update(schema.requests).set({ claimedById: null, claimedAt: null, decidedById: null, flags, summary }).where(eq(schema.requests.id, request.id));
+  await dispatchCard(db, request.id, now);
 }
 
 /** A buyer's YES / NO text after a counter or no-answer offer. */

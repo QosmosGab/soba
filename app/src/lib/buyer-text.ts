@@ -36,8 +36,8 @@ export const buyerText = {
   passedOn: (company: string, lang: Lang) => lang === "es" ? `${company}: recibido, se lo paso al equipo.` : `${company}: got it, passing that to the team.`,
 };
 
-/** YES / NO in either language. */
-export const saysYes = (t: string) => /^(yes|y|yep|yeah|ok|okay|confirm|confirmed|si|sí|dale|claro|va)\b/i.test(t.trim());
-export const saysNo = (t: string) => /^(no|n|nope|pass|no thanks|no gracias)\b/i.test(t.trim());
-/** TCPA opt-out keywords; Twilio blocks further sends on its own, we also record it. */
-export const saysStop = (t: string) => /^(stop|unsubscribe|cancel|end|quit|stopall|alto|parar)$/i.test(t.trim());
+/** A plain YES / NO in either language. "Yes but only 250" is neither: it goes back to the reps as a change. */
+export const saysYes = (t: string) => /^(yes|y|yep|yeah|yup|ok|okay|confirm|confirmed|si|sí|dale|claro|va|sale)[\s.,!]*(please|gracias|thanks|thank you)?[\s.,!]*$/i.test(t.trim());
+export const saysNo = (t: string) => /^(no|n|nope|pass|no thanks|no gracias)[\s.,!]*(thanks|gracias)?[\s.,!]*$/i.test(t.trim());
+/** Opt-out keywords; Twilio blocks further sends on its own, we also record it. "Cancel" is an order instruction, not an opt-out. */
+export const saysStop = (t: string) => /^(stop|unsubscribe|stopall|alto)$/i.test(t.trim());

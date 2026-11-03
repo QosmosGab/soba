@@ -72,8 +72,12 @@ export async function handleIntake(db: Db, input: IntakeInput): Promise<IntakeRe
     await db.insert(schema.events).values({ customerId, type: "intake.spam", payload: { channel: input.channel, callerId: callerE164, summary: extracted.summary } });
     return { outcome: "spam" };
   }
-  // Caller ID fills a missing callback number; it is never trusted over what the buyer said.
-  if (!extracted.callbackNumber && callerE164) extracted.callbackNumber = callerE164;
+  // Caller ID fills a missing callback number; it is never trusted over what the buyer said, and a PBX
+  // that forwards with the company's own number as caller ID must never make us call the switchboard.
+  const own = (await db.select({ n: schema.lines.companyNumber }).from(schema.lines).where(eq(schema.lines.customerId, customerId))).map((l) => toE164(l.n)).filter(Boolean);
+  const usableCallerId = callerE164 && !own.includes(callerE164) ? callerE164 : null;
+  if (!extracted.callbackNumber && usableCallerId) extracted.callbackNumber = usableCallerId;
+  else if (extracted.callbackNumber && own.includes(toE164(extracted.callbackNumber))) extracted.callbackNumber = null;
   const isTest = callerE164 != null && settings.testNumbers.map((n) => toE164(n)).includes(callerE164);
 
   // The mid-call tool may already have created (and perhaps cleared) this request.
@@ -99,14 +103,19 @@ export async function handleIntake(db: Db, input: IntakeInput): Promise<IntakeRe
   if (input.threadId) await db.update(schema.buyerThreads).set({ requestId: created.request.id, state: "done", lastAt: now }).where(eq(schema.buyerThreads.id, input.threadId));
 
   if (created.merged) {
-    // The card can't be edited on WhatsApp; the reps get a one-line notice instead.
-    const recipients = await db.select({ memberId: schema.messages.memberId }).from(schema.messages).where(and(eq(schema.messages.requestId, created.request.id), eq(schema.messages.direction, "out")));
-    const ids = Array.from(new Set(recipients.map((r) => r.memberId).filter((x): x is string => Boolean(x))));
-    for (const id of ids) {
-      const [m] = await db.select().from(schema.teamMembers).where(eq(schema.teamMembers.id, id));
-      if (m) await sendToRep(db, m, { customerId, requestId: created.request.id, body: `${created.request.callerName ?? "The buyer"} ${input.channel === "call" ? "called" : "texted"} again about ref ${created.request.ref}. Told them it's with the team.`, template: { kind: "notice" }, now });
+    // Same buyer again within a few hours. If the reps haven't acted yet, they get a fresh card with the
+    // latest version of the order; if someone has, that person gets a notice with what was said.
+    const r = created.request;
+    const live = await db.select({ id: schema.decisions.id, memberId: schema.decisions.memberId }).from(schema.decisions).where(and(eq(schema.decisions.requestId, r.id), eq(schema.decisions.undone, false))).limit(1);
+    const whatNow = extracted.summary || `${extracted.type.replace("_", " ")} by ${input.channel}`;
+    if (!live.length) {
+      await db.update(schema.requests).set({ summary: whatNow, transcript: [r.transcript, input.transcript].filter(Boolean).join("\n\n---\n\n") }).where(eq(schema.requests.id, r.id));
+      await dispatchCard(db, r.id, now);
+      return { outcome: "merged", requestId: r.id, ref: r.ref };
     }
-    return { outcome: "merged", requestId: created.request.id, ref: created.request.ref };
+    const [m] = live[0].memberId ? await db.select().from(schema.teamMembers).where(eq(schema.teamMembers.id, live[0].memberId)) : [];
+    if (m) await sendToRep(db, m, { customerId, requestId: r.id, body: `${r.callerName ?? "The buyer"} ${input.channel === "call" ? "called" : "texted"} again about ref ${r.ref}: ${whatNow}`, template: { kind: "notice" }, now });
+    return { outcome: "merged", requestId: r.id, ref: r.ref };
   }
 
   request = created.request;

@@ -1,10 +1,10 @@
 // Timers: the undo window, card escalation, callback retries, and the nightly
 // clock (same-prices prompt, forwarding test, morning summary) that runs every
 // five minutes and fires whatever is due per customer, idempotently.
-import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, isNotNull, lt } from "drizzle-orm";
 import { inngest } from "./client";
 import { getDb, schema } from "@/db";
-import { executeDecision, retryCallback } from "@/lib/callbacks";
+import { executeDecision, retryCallback, handleCallbackOutcome } from "@/lib/callbacks";
 import { remindOnCard, loadCustomer } from "@/lib/cards";
 import { nextOpening } from "@/lib/hours";
 import { sendMorningSummary } from "@/lib/summary";
@@ -53,12 +53,7 @@ export const callbackRetry = inngest.createFunction(
   },
 );
 
-function localHHMM(d: Date, tz: string) {
-  const p = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour12: false, hour: "2-digit", minute: "2-digit", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
-  const g = (k: string) => p.find((x) => x.type === k)!.value;
-  return { minutes: (Number(g("hour")) % 24) * 60 + Number(g("minute")), weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(g("weekday")), iso: `${g("year")}-${g("month")}-${g("day")}` };
-}
-const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
+import { localParts, toMinutes as toMin } from "@/lib/time";
 
 /** Everything on a clock, checked every five minutes for every live customer. */
 export async function nightlyTick(now = new Date()) {
@@ -66,18 +61,31 @@ export async function nightlyTick(now = new Date()) {
   const customers = await db.select().from(schema.customers).where(eq(schema.customers.status, "live"));
   const out: Record<string, string[]> = {};
   for (const c of customers) {
+    try { out[c.id] = await tickCustomer(db, c, now); }
+    catch (err) {
+      // One customer's broken settings never stop the clock for the others.
+      await db.insert(schema.events).values({ customerId: c.id, type: "clock.failed", payload: { error: String(err).slice(0, 300) } });
+      out[c.id] = ["failed"];
+    }
+  }
+  return out;
+}
+
+async function tickCustomer(db: Awaited<ReturnType<typeof getDb>>, c: typeof schema.customers.$inferSelect, now: Date): Promise<string[]> {
+  {
     const did: string[] = [];
     const [settings] = await db.select().from(schema.settings).where(eq(schema.settings.customerId, c.id));
-    if (!settings) continue;
-    const { minutes, weekday, iso } = localHHMM(now, c.timezone);
+    if (!settings) return did;
+    const { minutes, weekday, isoDate: iso } = localParts(now, c.timezone);
     const day = settings.hours[["mon", "tue", "wed", "thu", "fri", "sat", "sun"][weekday]];
     const dayStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const doneToday = async (type: string) => (await db.select().from(schema.events).where(and(eq(schema.events.customerId, c.id), eq(schema.events.type, type), gte(schema.events.at, dayStart)))).some((e) => e.payload.day === iso);
     const mark = (type: string, extra: Record<string, unknown> = {}) => db.insert(schema.events).values({ customerId: c.id, type, payload: { day: iso, ...extra } });
     const within = (hhmm: string) => minutes >= toMin(hhmm) && minutes < toMin(hhmm) + 10;
 
-    // Same prices? (price-setters), at the configured local time.
-    if (within(settings.samePricesPromptTime) && !(await doneToday("rules.same_prompted"))) {
+    // Same prices? (price-setters), at the configured local time, unless tonight's prices are already in.
+    const liveNow = await db.select({ id: schema.priceRules.id }).from(schema.priceRules).where(and(eq(schema.priceRules.customerId, c.id), gt(schema.priceRules.expiresAt, now))).limit(1);
+    if (within(settings.samePricesPromptTime) && !liveNow.length && !(await doneToday("rules.same_prompted"))) {
       const text = await samePricesPromptText(db, c.id, now);
       if (text) {
         const setters = await db.select().from(schema.teamMembers).where(and(eq(schema.teamMembers.customerId, c.id), eq(schema.teamMembers.canSetPrices, true), eq(schema.teamMembers.active, true)));
@@ -106,6 +114,17 @@ export async function nightlyTick(now = new Date()) {
       await mark("forwarding.test_failed", { lineId: voice.id });
       did.push("forwarding_failed");
     }
+    // Callbacks the provider never reported back on (no webhook in 30 minutes) are treated as unanswered.
+    const silent = await db.select().from(schema.callbacks).innerJoin(schema.requests, eq(schema.requests.id, schema.callbacks.requestId))
+      .where(and(eq(schema.requests.customerId, c.id), eq(schema.callbacks.outcome, "pending"), eq(schema.callbacks.channel, "voice"), isNotNull(schema.callbacks.providerConversationId), lt(schema.callbacks.lastAttemptAt, new Date(now.getTime() - 30 * 60 * 1000))));
+    for (const row of silent) {
+      await handleCallbackOutcome(db, row.callbacks.providerConversationId!, { outcome: "no_answer", notes: "no result from the call within 30 minutes" }, now);
+      did.push("callback_timeout");
+    }
+    // Offers by text nobody answered in a day are closed as no answer; the request shows In progress.
+    const staleTexts = await db.select().from(schema.callbacks).innerJoin(schema.requests, eq(schema.requests.id, schema.callbacks.requestId))
+      .where(and(eq(schema.requests.customerId, c.id), eq(schema.callbacks.outcome, "pending"), eq(schema.callbacks.channel, "sms"), lt(schema.callbacks.lastAttemptAt, new Date(now.getTime() - 24 * 60 * 60 * 1000))));
+    for (const row of staleTexts) await db.update(schema.callbacks).set({ outcome: "no_answer", notes: "no reply to the text offer within a day" }).where(eq(schema.callbacks.id, row.callbacks.id));
     // Retention: call notes and message bodies older than the setting are scrubbed once a day; amounts and statuses stay.
     if (!(await doneToday("retention.swept"))) {
       const cutoff = new Date(now.getTime() - settings.retentionMonths * 30 * 24 * 60 * 60 * 1000);
@@ -124,9 +143,8 @@ export async function nightlyTick(now = new Date()) {
       const r = await sendMorningSummary(db, c.id, opening, now);
       if ("sent" in r) did.push("summary");
     }
-    out[c.id] = did;
+    return did;
   }
-  return out;
 }
 
 export const nightlyClock = inngest.createFunction(

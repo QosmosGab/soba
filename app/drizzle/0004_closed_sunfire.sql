@@ -1,0 +1,1 @@
+ALTER TABLE "price_sheets" ADD COLUMN "expiresAt" timestamp with time zone;

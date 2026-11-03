@@ -4,6 +4,7 @@ import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import { weekStart, value } from "./summary";
+import { fmtPhone } from "./card";
 
 type Request = typeof schema.requests.$inferSelect;
 
@@ -42,7 +43,7 @@ export async function performance(db: Db, customerId: string, tz: string, range:
   const name = (id: string | null) => members.find((m) => m.id === id)?.name ?? null;
   const byReq = (id: string) => lines.filter((l) => l.requestId === id);
 
-  const orders = reqs.filter((r) => r.type === "new_order" || r.type === "change");
+  const orders = reqs.filter((r) => r.type === "new_order");
   const won = orders.filter(isWon);
   const booked = won.reduce((s, r) => s + value(byReq(r.id)), 0);
   const assisted = won.filter((r) => r.assisted).reduce((s, r) => s + value(byReq(r.id)), 0);
@@ -62,8 +63,8 @@ export async function performance(db: Db, customerId: string, tz: string, range:
     return {
       id: r.id, ref: r.ref, receivedAt: r.receivedAt,
       when: r.receivedAt.toLocaleString("en-US", { timeZone: tz, weekday: "short", hour: "numeric", minute: "2-digit" }).replace(",", "").replace(" AM", "am").replace(" PM", "pm"),
-      buyer: b?.company ?? r.callerCompany ?? r.callerName ?? "Unknown", city: b?.city ?? null, contact: r.callerName ?? b?.contactName ?? null, phone: r.callbackNumber,
-      item: r.type !== "new_order" && r.type !== "change" ? (r.summary ?? r.type) : ls.length > 1 ? `${ls.length} lines` : l ? `${l.product.split(" ")[0]} ${l.size ?? ""} · ${l.cases ?? "?"} cs ${isWon(r) ? "at" : "· offers"} ${l.finalPrice ?? l.priceOffered ? `$${Number(l.finalPrice ?? l.priceOffered).toFixed(2)}` : "?"}`.trim() : "—",
+      buyer: b?.company ?? r.callerCompany ?? r.callerName ?? "Unknown", city: b?.city ?? null, contact: r.callerName ?? b?.contactName ?? null, phone: fmtPhone(r.callbackNumber) || null,
+      item: r.type !== "new_order" ? (r.summary ?? r.type) : ls.length > 1 ? `${ls.length} lines` : l ? `${l.product.split(" ")[0]} ${l.size ?? ""} · ${l.cases ?? "?"} cs ${isWon(r) ? "at" : "· offers"} ${l.finalPrice ?? l.priceOffered ? `$${Number(l.finalPrice ?? l.priceOffered).toFixed(2)}` : "?"}`.trim() : "—",
       cases: ls.length === 1 ? l.cases : ls.reduce((s, x) => s + (x.cases ?? 0), 0) || null, price: ls.length === 1 && l ? Number(l.finalPrice ?? l.priceOffered ?? 0) || null : null,
       amount: value(ls), status: r.status, statusLabel: statusLabel(r, name(r.decidedById)), type: r.type,
       takenOver: r.status === "in_progress" && taker ? name(taker.memberId) : null, isNew: r.flags.includes("new_buyer"), channel: r.channel, flags: r.flags,

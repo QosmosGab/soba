@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/db";
 import { panelCustomer } from "@/lib/auth";
 import { requestDetail, statusClass, statusLabel } from "@/lib/panel-data";
+import { fmtPhone } from "@/lib/card";
 import { decide } from "../../actions";
 
 const $ = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
@@ -32,7 +33,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
           <span className={"st " + statusClass(r.status)}>{takeover && open ? `${name(takeover.memberId)} took over` : statusLabel(r, name(r.decidedById))}</span></div>
         {r.flags.length > 0 && <div className="chips">{r.flags.map((f) => <span key={f} className="chip">{f.replace(/_/g, " ")}</span>)}</div>}
         <div className="kv" style={{ marginTop: 12 }}>
-          <span>Contact</span><div>{[r.callerName ?? buyer?.contactName, r.callbackNumber].filter(Boolean).join(" · ") || "not captured"}</div>
+          <span>Contact</span><div>{[r.callerName ?? buyer?.contactName, fmtPhone(r.callbackNumber)].filter(Boolean).join(" · ") || "not captured"}</div>
           {lines.map((l, i) => (<FragmentLine key={l.id} idx={lines.length > 1 ? i + 1 : null} l={l} won={won} />))}
           {lines.length === 0 && <><span>Summary</span><div>{r.summary}</div></>}
           {d.amount > 0 && <><span>Amount</span><div><b>{$(d.amount)}</b></div></>}

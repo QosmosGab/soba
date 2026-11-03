@@ -11,13 +11,14 @@ import { llm, MODEL } from "./llm";
 import { loadCustomer } from "./cards";
 import { handleIntake } from "./intake";
 import { sendToBuyer } from "./messaging";
-import { handleBuyerOfferReply } from "./callbacks";
+import { handleBuyerOfferReply, reopenAsChanged } from "./callbacks";
 import { buyerText, saysStop } from "./buyer-text";
 import { isOffHours } from "./hours";
 import { toE164 } from "./requests";
-import { dispatchCard } from "./cards";
 
 const THREAD_WINDOW_MS = 3 * 60 * 60 * 1000;
+/** An offer by text stops being answerable after a day; a later YES starts a new conversation instead. */
+const OFFER_TTL_MS = 24 * 60 * 60 * 1000;
 const CONFIRM_WINDOW_MS = 36 * 60 * 60 * 1000;
 
 const TurnSchema = z.object({
@@ -75,7 +76,7 @@ export async function handleBuyerText(db: Db, input: BuyerTextInput): Promise<{ 
 
   // 1. A YES/NO to a pending offer (counter by text, or the no-answer text).
   const pendingOffers = await db.select({ requestId: schema.callbacks.requestId }).from(schema.callbacks).innerJoin(schema.requests, eq(schema.requests.id, schema.callbacks.requestId))
-    .where(and(eq(schema.requests.customerId, customerId), eq(schema.requests.callbackNumber, phone), eq(schema.callbacks.outcome, "pending"), eq(schema.requests.status, "in_progress")))
+    .where(and(eq(schema.requests.customerId, customerId), eq(schema.requests.callbackNumber, phone), eq(schema.callbacks.outcome, "pending"), eq(schema.requests.status, "in_progress"), gt(schema.callbacks.lastAttemptAt, new Date(now.getTime() - OFFER_TTL_MS))))
     .orderBy(desc(schema.callbacks.lastAttemptAt)).limit(1);
   if (pendingOffers[0]) {
     await db.insert(schema.messages).values({ customerId, requestId: pendingOffers[0].requestId, direction: "in", party: "buyer", channel: "sms", body: input.body, providerId: input.providerId, sentAt: now }).onConflictDoNothing();
@@ -84,8 +85,7 @@ export async function handleBuyerText(db: Db, input: BuyerTextInput): Promise<{ 
     // Anything else is a change: back to the reps.
     const [request] = await db.select().from(schema.requests).where(eq(schema.requests.id, pendingOffers[0].requestId));
     await db.update(schema.callbacks).set({ outcome: "changed", notes: input.body }).where(and(eq(schema.callbacks.requestId, request.id), eq(schema.callbacks.outcome, "pending")));
-    await db.update(schema.requests).set({ claimedById: null, decidedById: null, flags: Array.from(new Set([...request.flags, "changed"])), summary: `Buyer replied to the offer: ${input.body}` }).where(eq(schema.requests.id, request.id));
-    await dispatchCard(db, request.id, now);
+    await reopenAsChanged(db, request, `Buyer replied to the offer: ${input.body}`, input.body, now);
     await sendToBuyer(db, { customerId, requestId: request.id, to: phone, body: buyerText.passedOn(customer.name, request.language === "es" ? "es" : "en"), now });
     return { action: "offer_changed", requestId: request.id };
   }

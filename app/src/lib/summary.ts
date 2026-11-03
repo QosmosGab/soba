@@ -1,7 +1,7 @@
 // The morning summary: one window (last closing to this opening), the week so
 // far, the orders, the rules, what wasn't an order. Rendered as email HTML,
 // plain text, and the short WhatsApp version. Sent once per window.
-import { and, eq, gte, inArray, lt, lte, gt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lt, lte, gt } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import { loadCustomer } from "./cards";
@@ -9,7 +9,7 @@ import { sendToRep } from "./messaging";
 import { sendEmail } from "./providers/email";
 import { env } from "./env";
 import { fmtMoney } from "./card";
-import { DAY_KEYS } from "./hours";
+import { previousClosing } from "./hours";
 
 type Request = typeof schema.requests.$inferSelect;
 type Line = typeof schema.orderLines.$inferSelect;
@@ -27,11 +27,8 @@ export type SummaryData = {
 export const value = (lines: Line[]) => lines.reduce((s, l) => s + (l.cases ?? 0) * Number(l.finalPrice ?? l.priceOffered ?? 0), 0);
 const isWon = (r: Request) => r.status === "auto_cleared" || r.status === "approved";
 
-function localParts(d: Date, tz: string) {
-  const p = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
-  const g = (k: string) => p.find((x) => x.type === k)!.value;
-  return { weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(g("weekday")), iso: `${g("year")}-${g("month")}-${g("day")}` };
-}
+import { localParts as sharedParts } from "./time";
+const localParts = (d: Date, tz: string) => { const p = sharedParts(d, tz); return { weekday: p.weekday, iso: p.isoDate }; };
 
 /** Monday 00:00 local of the week containing `d`, found by stepping back whole days. */
 export function weekStart(d: Date, tz: string): Date {
@@ -50,17 +47,7 @@ export function weekStart(d: Date, tz: string): Date {
 
 /** The previous closing time before `opening` (the start of the off-hours window), walking back over closed days. */
 export function windowStartFor(opening: Date, hours: Record<string, { open: string; close: string; closed: boolean }>, tz: string, holidays: string[]): Date {
-  const step = 15 * 60 * 1000;
-  let t = new Date(opening.getTime() - step);
-  for (let i = 0; i < 8 * 24 * 4; i++, t = new Date(t.getTime() - step)) {
-    const p = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour12: false, hour: "2-digit", minute: "2-digit", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(t);
-    const g = (k: string) => p.find((x) => x.type === k)!.value;
-    const day = hours[DAY_KEYS[["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(g("weekday"))]];
-    if (!day || day.closed || holidays.includes(`${g("year")}-${g("month")}-${g("day")}`)) continue;
-    const [ch, cm] = day.close.split(":").map(Number);
-    if (Number(g("hour")) % 24 === ch && Number(g("minute")) === cm) return t;
-  }
-  return new Date(opening.getTime() - 14 * 60 * 60 * 1000);
+  try { return previousClosing(opening, hours, tz, holidays); } catch { return new Date(opening.getTime() - 14 * 60 * 60 * 1000); }
 }
 
 export async function buildSummary(db: Db, customerId: string, windowStart: Date, windowEnd: Date, now: Date): Promise<SummaryData> {
@@ -75,12 +62,12 @@ export async function buildSummary(db: Db, customerId: string, windowStart: Date
   const byReq = (id: string) => lines.filter((l) => l.requestId === id);
   const statusLabel = (r: Request) => r.status === "auto_cleared" ? "Auto-cleared" : r.status === "approved" ? `Approved by ${name(r.decidedById) ?? "a rep"}` : r.status === "in_progress" ? "In progress" : "Rejected";
 
-  const orderReqs = reqs.filter((r) => r.type === "new_order" || r.type === "change").sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime());
+  const orderReqs = reqs.filter((r) => r.type === "new_order").sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime());
   const wonReqs = orderReqs.filter(isWon);
   const won = wonReqs.reduce((s, r) => s + value(byReq(r.id)), 0);
 
   const ws = weekStart(now, tz);
-  const weekReqs = await db.select().from(schema.requests).where(and(eq(schema.requests.customerId, customerId), gte(schema.requests.receivedAt, ws), lte(schema.requests.receivedAt, now), eq(schema.requests.isTest, false), inArray(schema.requests.status, ["auto_cleared", "approved"])));
+  const weekReqs = await db.select().from(schema.requests).where(and(eq(schema.requests.customerId, customerId), gte(schema.requests.receivedAt, ws), lte(schema.requests.receivedAt, now), eq(schema.requests.isTest, false), eq(schema.requests.type, "new_order"), inArray(schema.requests.status, ["auto_cleared", "approved"])));
   const weekLines = weekReqs.length ? await db.select().from(schema.orderLines).where(inArray(schema.orderLines.requestId, weekReqs.map((r) => r.id))) : [];
   const weekDays = [0, 0, 0, 0, 0, 0, 0];
   for (const r of weekReqs) weekDays[localParts(r.receivedAt, tz).weekday] += value(weekLines.filter((l) => l.requestId === r.id));
@@ -162,25 +149,33 @@ ${sections.includes("transcripts") ? `<div style="margin:14px 0"><a href="${link
   return { subject, html, text };
 }
 
-/** Sends the summary for the window ending at `opening`, once. */
-export async function sendMorningSummary(db: Db, customerId: string, opening: Date, now: Date) {
+/**
+ * Sends the summary for the night ending at `opening`, once. The window runs from where the last
+ * summary stopped (or the previous closing) to the moment it is sent, so nothing falls between two summaries.
+ */
+export async function sendMorningSummary(db: Db, customerId: string, opening: Date, now: Date, opts: { onlyMemberId?: string } = {}) {
   const { customer, settings } = await loadCustomer(db, customerId);
-  const windowStart = windowStartFor(opening, settings.hours, customer.timezone, settings.holidays);
   const existing = await db.select().from(schema.summaries).where(and(eq(schema.summaries.customerId, customerId), eq(schema.summaries.windowEnd, opening)));
   if (existing[0]?.sentAt) return { skipped: "already sent" as const };
-  const data = await buildSummary(db, customerId, windowStart, opening, now);
+  const [last] = await db.select().from(schema.summaries).where(and(eq(schema.summaries.customerId, customerId), isNotNull(schema.summaries.sentAt), lt(schema.summaries.windowEnd, opening))).orderBy(desc(schema.summaries.sentAt)).limit(1);
+  const closing = windowStartFor(opening, settings.hours, customer.timezone, settings.holidays);
+  const windowStart = last?.sentAt && last.sentAt > closing ? last.sentAt : closing;
+  const windowEnd = now < opening ? now : opening;
+  const data = await buildSummary(db, customerId, windowStart, windowEnd, now);
   const quiet = !data.orders.length && !data.nonOrders.length;
   if (quiet && !settings.quietNightNote) return { skipped: "quiet" as const };
   const [row] = existing[0] ? [existing[0]] : await db.insert(schema.summaries).values({ customerId, windowStart, windowEnd: opening }).returning();
+  await db.update(schema.summaries).set({ windowStart }).where(eq(schema.summaries.id, row.id));
   const link = `${env.appUrl}/panel/summary/${row.id}`;
-  const members = await db.select().from(schema.teamMembers).where(and(eq(schema.teamMembers.customerId, customerId), eq(schema.teamMembers.active, true)));
-  const emails = members.filter((m) => m.summaryEmail && m.email).map((m) => m.email!);
+  const all = await db.select().from(schema.teamMembers).where(and(eq(schema.teamMembers.customerId, customerId), eq(schema.teamMembers.active, true)));
+  const members = opts.onlyMemberId ? all.filter((m) => m.id === opts.onlyMemberId) : all;
+  const emails = members.filter((m) => (m.summaryEmail || opts.onlyMemberId) && m.email).map((m) => m.email!);
   if (emails.length) {
     const e = emailSummary(data, link, settings.summarySections, settings.quietNightNote);
     await sendEmail({ to: emails, subject: e.subject, html: e.html, text: e.text, fromName: customer.name });
   }
   const wa = whatsappSummary(data, link);
-  for (const m of members.filter((m) => m.summaryWhatsapp)) await sendToRep(db, m, { customerId, body: wa, template: { kind: "notice" }, now });
+  for (const m of members.filter((m) => m.summaryWhatsapp || opts.onlyMemberId)) await sendToRep(db, m, { customerId, body: wa, template: { kind: "notice" }, now });
   await db.update(schema.summaries).set({ sentAt: now, recipients: [...emails, ...members.filter((m) => m.summaryWhatsapp).map((m) => m.cell)] }).where(eq(schema.summaries.id, row.id));
   await db.insert(schema.events).values({ customerId, type: "summary.sent", payload: { summaryId: row.id, won: data.won, orders: data.wonCount } });
   return { sent: true as const, summaryId: row.id, data };

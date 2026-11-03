@@ -32,9 +32,11 @@ export async function POST(req: Request) {
   if (isCallbackAgent) {
     const dc = data.analysis?.data_collection_results ?? {};
     const get = (k: string) => { const v = dc[k]?.value; return typeof v === "string" && v.trim() ? v.trim() : null; };
-    const raw = (get("outcome") ?? "no_answer").toLowerCase().replace(/[\s-]+/g, "_");
-    const outcome = (["confirmed", "declined", "changed", "no_answer", "bought_elsewhere"].includes(raw) ? raw : "no_answer") as CallbackOutcome["outcome"];
-    const r = await handleCallbackOutcome(db, data.conversation_id, { outcome, notes: data.analysis?.transcript_summary ?? null, changeDetails: get("change_details"), competitor: get("competitor"), competitorPrice: get("competitor_price"), transcript: transcriptText(event) }, now);
+    const buyerSpoke = (data.transcript ?? []).some((t) => t.role !== "agent" && t.message?.trim());
+    const raw = (get("outcome") ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+    // No usable outcome but the buyer said things: the reps judge it, not a retry.
+    const outcome = (["confirmed", "declined", "changed", "no_answer", "bought_elsewhere"].includes(raw) ? raw : buyerSpoke ? "changed" : "no_answer") as CallbackOutcome["outcome"];
+    const r = await handleCallbackOutcome(db, data.conversation_id, { outcome, notes: data.analysis?.transcript_summary ?? null, changeDetails: get("change_details") ?? (raw ? null : "outcome not captured; see the call notes"), competitor: get("competitor"), competitorPrice: get("competitor_price"), transcript: transcriptText(event) }, now);
     return json({ ok: true, callback: r });
   }
 

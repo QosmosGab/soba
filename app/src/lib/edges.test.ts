@@ -10,6 +10,8 @@ import { handleRepMessage, STALE_CLAIM_MS } from "./decisions";
 import { executeDecision, handleCallbackOutcome } from "./callbacks";
 import { handleBuyerText } from "./textdesk";
 import { toE164 } from "./requests";
+import { resolvePickupDate } from "./produce";
+import { saysYes } from "./buyer-text";
 import { parseRuleCommand } from "./rules";
 import { nightlyTick } from "@/inngest/functions";
 import { deskTool } from "./tool";
@@ -52,9 +54,9 @@ describe("phone numbers", () => {
 
 describe("mid-call booking then the transcript", () => {
   it("one request per conversation: not cleared on the call, the transcript sends one card, not two", async () => {
-    const r1 = await tool({ action: "try_clear", caller_id: "+13125550142", conversation_id: "conv_A", product: "vine ripes", size: "4x4", pack: "25 lb", cases: 300, price: 8.0, pickup: "Monday", buyer_name: "Mike Torres", company: "Lopez Bros", callback_number: "312-555-0142", callback_permission: true });
+    const r1 = await tool({ action: "try_clear", caller_id: "+13125550142", conversation_id: "conv_A", product: "vine ripes", size: "4x4", pack: "25 lb", cases: 300, price: 8.0, pickup: "Monday", fulfillment: "collect", buyer_name: "Mike Torres", company: "Lopez Bros", callback_number: "312-555-0142", callback_permission: true });
     expect(r1.cleared).toBe(false);
-    const r2 = await tool({ action: "try_clear", caller_id: "+13125550142", conversation_id: "conv_A", product: "vine ripes", size: "4x4", pack: "25 lb", cases: 300, price: 8.1, pickup: "Monday", buyer_name: "Mike Torres", company: "Lopez Bros", callback_number: "312-555-0142" });
+    const r2 = await tool({ action: "try_clear", caller_id: "+13125550142", conversation_id: "conv_A", product: "vine ripes", size: "4x4", pack: "25 lb", cases: 300, price: 8.1, pickup: "Monday", fulfillment: "collect", buyer_name: "Mike Torres", company: "Lopez Bros", callback_number: "312-555-0142" });
     expect(r2.ref).toBe(r1.ref); // the retry did not create a second request
     const post = await handleIntake(db, { customerId, channel: "call", transcript: "Buyer: 300 cs at 8.10", now: new Date(), callerId: "+13125550142", providerConversationId: "conv_A", extracted: x({}, [line({ priceOffered: 8.1 })]) });
     expect(post).toMatchObject({ outcome: "card_sent", ref: r1.ref });
@@ -64,7 +66,7 @@ describe("mid-call booking then the transcript", () => {
   });
 
   it("cleared on the call: the transcript attaches, no second confirmation", async () => {
-    const r = await tool({ action: "try_clear", caller_id: "+16025550150", conversation_id: "conv_B", product: "vine ripes", size: "4x4", pack: "25 lb", cases: 100, price: 8.75, pickup: "Monday", buyer_name: "Sara Kim", company: "Valley Fresh", callback_number: "602-555-0150", callback_permission: true });
+    const r = await tool({ action: "try_clear", caller_id: "+16025550150", conversation_id: "conv_B", product: "vine ripes", size: "4x4", pack: "25 lb", cases: 100, price: 8.75, pickup: "Monday", fulfillment: "collect", buyer_name: "Sara Kim", company: "Valley Fresh", callback_number: "602-555-0150", callback_permission: true });
     expect(r.cleared).toBe(true);
     const id = (await reqs()).find((q) => q.providerConversationId === "conv_B")!.id;
     const before = (await db.select().from(schema.messages).where(eq(schema.messages.requestId, id))).length;
@@ -199,5 +201,62 @@ describe("retention", () => {
     expect(after.transcript).toBeNull();
     expect(after.status).toBe("in_progress");
     expect((await db.select().from(schema.orderLines).where(eq(schema.orderLines.requestId, r.requestId))).length).toBe(1);
+  });
+});
+
+describe("the reviewer's cases", () => {
+  const LATER = new Date(NIGHT.getTime() + 2 * 60 * 60 * 1000); // well after everything above
+  it("two open cards and a bare 'yes' gets a question, not a guess; the ref settles it", async () => {
+    const a = await handleIntake(db, { customerId, channel: "call", transcript: "x", now: LATER, extracted: x({ callbackNumber: "719-555-0101", callerName: "Ana One" }, [line({ priceOffered: 8.0 })]) });
+    const b = await handleIntake(db, { customerId, channel: "call", transcript: "x", now: new Date(LATER.getTime() + 60_000), extracted: x({ callbackNumber: "719-555-0102", callerName: "Ben Two" }, [line({ priceOffered: 8.1 })]) });
+    if (a.outcome !== "card_sent" || b.outcome !== "card_sent") throw new Error("expected cards");
+    const ask = await handleRepMessage(db, { member: miguel, text: "yes", now: new Date(LATER.getTime() + 120_000) });
+    expect(ask.action).toBe("which_one");
+    expect(ask.replies[0]).toMatch(/^Which one\? ref \d+ \(Ben\) or .*\(Ana\)/);
+    const ok = await handleRepMessage(db, { member: miguel, text: `${a.ref} yes`, now: new Date(LATER.getTime() + 180_000) });
+    expect(ok).toMatchObject({ action: "approve", requestId: a.requestId });
+    const other = await handleRepMessage(db, { member: miguel, text: `take ${b.ref}`, now: new Date(LATER.getTime() + 240_000) });
+    expect(other).toMatchObject({ action: "take_over", requestId: b.requestId });
+  });
+
+  it("a buyer's 'yes but only 250' is a change, not a confirmation", () => {
+    expect(saysYes("Yes")).toBe(true); expect(saysYes("si, gracias")).toBe(true);
+    expect(saysYes("yes but only 250")).toBe(false); expect(saysYes("yes if Tuesday")).toBe(false);
+  });
+
+  it("'Monday' said early Monday morning is today; said Monday afternoon it is next week", () => {
+    expect(resolvePickupDate("Monday", new Date("2026-11-09T07:30:00Z"), "America/Phoenix")).toBe("2026-11-09"); // Mon 12:30am
+    expect(resolvePickupDate("Monday", new Date("2026-11-09T22:00:00Z"), "America/Phoenix")).toBe("2026-11-16"); // Mon 3pm
+    expect(resolvePickupDate("el lunes", new Date("2026-11-08T09:00:00Z"), "America/Phoenix")).toBe("2026-11-09"); // Sun 2am
+  });
+
+  it("a typed sentence with numbers is not a price rule", () => {
+    expect(parseRuleCommand("romas short, maybe 10 cases at 9")).toBeNull();
+    expect(parseRuleCommand("tell him 8.75 max 200")).toBeNull();
+    expect(parseRuleCommand("4x4 VR 8.50 600")).toMatchObject({ kind: "rules" });
+  });
+
+  it("after the buyer declines on the callback, a rep can still take it over", async () => {
+    const r = await handleIntake(db, { customerId, channel: "call", transcript: "x", now: NIGHT, extracted: x({ callbackNumber: "719-555-0103", callerName: "Cal Three" }, [line({ priceOffered: 8.0 })]) });
+    if (r.outcome !== "card_sent") throw new Error("expected card");
+    await handleRepMessage(db, { member: ruben, text: "8.60", buttonPayload: `counter_text:${r.requestId}`, now: NIGHT });
+    const [d] = await db.select().from(schema.decisions).where(and(eq(schema.decisions.requestId, r.requestId), eq(schema.decisions.undone, false)));
+    await executeDecision(db, d.id, new Date(NIGHT.getTime() + 200_000));
+    const [cb] = await db.select().from(schema.callbacks).where(eq(schema.callbacks.requestId, r.requestId));
+    await handleCallbackOutcome(db, cb.providerConversationId!, { outcome: "declined" }, new Date(NIGHT.getTime() + 400_000));
+    expect((await req(r.requestId)).status).toBe("rejected");
+    const t = await handleRepMessage(db, { member: ruben, text: "take", buttonPayload: `take_over:${r.requestId}`, now: new Date(NIGHT.getTime() + 500_000) });
+    expect(t.action).toBe("take_over");
+    expect((await req(r.requestId)).status).toBe("in_progress");
+  });
+
+  it("an undo that lands as the timer fires loses cleanly: one of them wins", async () => {
+    const r = await handleIntake(db, { customerId, channel: "call", transcript: "x", now: NIGHT, extracted: x({ callbackNumber: "719-555-0104", callerName: "Dee Four" }, [line({ priceOffered: 8.0 })]) });
+    if (r.outcome !== "card_sent") throw new Error("expected card");
+    await handleRepMessage(db, { member: ruben, text: "approve", buttonPayload: `approve:${r.requestId}`, now: NIGHT });
+    const [d] = await db.select().from(schema.decisions).where(and(eq(schema.decisions.requestId, r.requestId), eq(schema.decisions.undone, false)));
+    expect(await executeDecision(db, d.id, new Date(NIGHT.getTime() + 121_000))).toMatchObject({ done: "called" });
+    const late = await handleRepMessage(db, { member: ruben, text: "undo", now: new Date(NIGHT.getTime() + 119_000) });
+    expect(late.action).toBe("too_late");
   });
 });

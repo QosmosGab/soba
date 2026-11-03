@@ -9,6 +9,8 @@ import type { ResolvedLine } from "./extract";
 import { sendToRep, type RepSend } from "./messaging";
 import { ringRep } from "./providers/twilio";
 import { inngestSend } from "@/inngest/send";
+import { localParts, toMinutes } from "./time";
+import { DAY_KEYS } from "./hours";
 
 type Member = typeof schema.teamMembers.$inferSelect;
 
@@ -19,12 +21,6 @@ export async function loadCustomer(db: Db, customerId: string) {
   return { customer, settings };
 }
 
-function localWeekdayMinutes(now: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, hour: "2-digit", minute: "2-digit", weekday: "short" }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)!.value;
-  return { weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(get("weekday")), minutes: (Number(get("hour")) % 24) * 60 + Number(get("minute")) };
-}
-const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
 /** Reps scheduled right now, from the coverage grid; the on-call rep always; everyone when the switch is on. */
 export async function cardRecipients(db: Db, customerId: string, now: Date): Promise<Member[]> {
@@ -32,9 +28,14 @@ export async function cardRecipients(db: Db, customerId: string, now: Date): Pro
   const members = await db.select().from(schema.teamMembers).where(and(eq(schema.teamMembers.customerId, customerId), eq(schema.teamMembers.active, true)));
   if (!members.length) return [];
   if (settings.everyoneGetsCards) return members;
-  const { weekday, minutes } = localWeekdayMinutes(now, customer.timezone);
+  // Before opening, the night still belongs to the day it started: Monday's reps cover until Tuesday's opening.
+  const local = localParts(now, customer.timezone);
+  const todayOpen = settings.hours[DAY_KEYS[local.weekday]];
+  const beforeOpening = todayOpen && local.minutes < toMinutes(todayOpen.open);
+  const weekday = beforeOpening ? (local.weekday + 6) % 7 : local.weekday;
+  const minutes = beforeOpening ? local.minutes + 24 * 60 : local.minutes;
   const cov = await db.select().from(schema.coverage).where(inArray(schema.coverage.memberId, members.map((m) => m.id)));
-  const scheduled = new Set(cov.filter((c) => c.weekday === weekday && minutes >= toMin(c.start) && minutes < toMin(c.end)).map((c) => c.memberId));
+  const scheduled = new Set(cov.filter((c) => c.weekday === weekday && minutes >= toMinutes(c.start) && (minutes < toMinutes(c.end) || minutes >= 24 * 60)).map((c) => c.memberId));
   const out = members.filter((m) => scheduled.has(m.id) || m.isOnCall);
   if (out.length) return out;
   const owner = members.filter((m) => m.isOwner);
@@ -74,6 +75,8 @@ export async function dispatchCard(db: Db, requestId: string, now: Date) {
   const variables = cardTemplateVariables(card);
   const nonOrderVariables = { "1": variables["1"], "2": variables["2"], "3": variables["3"], "4": variables["4"], "5": variables["5"], "6": variables["11"] };
   const sent: string[] = [];
+  // A new card ends any question we were asking a rep about an older one; their next line is read fresh.
+  if (recipients.length) await db.update(schema.repThreads).set({ state: "idle", updatedAt: now }).where(and(inArray(schema.repThreads.memberId, recipients.map((m) => m.id)), inArray(schema.repThreads.state, ["awaiting_counter", "awaiting_reason", "awaiting_followup", "awaiting_same_prices"])));
   for (const m of recipients) {
     // Only reps allowed to approve get the action buttons; the others see the same card as a notice.
     const template: RepSend["template"] = kind === "card" && m.canApprove ? { kind: "card", variables } : kind === "card_non_order" ? { kind: "card_non_order", variables: nonOrderVariables } : { kind: "notice" };

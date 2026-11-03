@@ -59,8 +59,9 @@ export function requestCard(c: CardInput): string {
   const when = `${c.channel}, ${fmtTime(c.receivedAt, c.timezone)}`;
   const flags = c.flags.filter((f) => !HIDDEN_FLAGS.has(f)).map((f) => FLAG_WORDS[f] ?? f);
   if (c.repeatTimes?.length) flags.push(`called ${c.repeatTimes.length + 1} times: ${[...c.repeatTimes, c.receivedAt].map((t) => fmtTime(t, c.timezone)).join(", ")}`);
-  const out: string[] = [who, `NEW REQUEST · ref ${c.ref} · ${when}`];
+  const out: string[] = [who, `${c.flags.includes("changed") ? "CHANGED" : "NEW"} REQUEST · ref ${c.ref} · ${when}`];
   if (flags.length) out.push(flags.join(" · "));
+  if (c.flags.includes("changed") && c.summary) out.push(c.summary);
   out.push("");
   if (c.type === "new_order" && c.lines.length) {
     c.lines.forEach((l, i) => {
@@ -104,7 +105,7 @@ export function cardTemplateVariables(c: CardInput): Record<string, string> {
     "1": one(who || "Unknown caller"),
     "2": String(c.ref),
     "3": one(`${c.channel}, ${fmtTime(c.receivedAt, c.timezone)}`),
-    "4": one(flags.join(" · ")),
+    "4": one([flags.join(" · "), c.flags.includes("changed") ? c.summary : ""].filter(Boolean).join(" — ")),
     "5": isOrder ? join((l) => `${l.productCanonical ?? l.product}${l.productCanonical ? "" : " (not on sheet)"}`) : one(c.summary),
     "6": isOrder ? join((l) => l.size ?? "—") : "—",
     "7": isOrder ? join((l) => l.pack ?? "—") : "—",
@@ -120,10 +121,10 @@ export function cardButtons(type: string): Array<"Approve" | "Counter" | "Reject
   return type === "new_order" ? ["Approve", "Counter", "Reject", "Take over"] : ["Take over"];
 }
 
-/** Messages after a tap, from the spec's "After a tap" table. */
 /** "Reply UNDO within 2 minutes to stop.", following the customer's undo setting. */
 export const undoWord = (undoSeconds: number) => `Reply UNDO within ${undoSeconds >= 120 ? `${Math.round(undoSeconds / 60)} minutes` : undoSeconds >= 60 ? "a minute" : `${undoSeconds} seconds`} to stop.`;
 
+/** Messages after a tap, from the spec's "After a tap" table. */
 export const afterTap = {
   undoWord,
   approve: (buyerFirst: string, cases: number | null, price: number | null, channel: "call" | "text", undo = undoWord(120)) =>
@@ -136,7 +137,6 @@ export const afterTap = {
     `It's yours: ${[name, fmtPhone(number)].filter(Boolean).join(", ") || "no contact details captured"}. Reply WON or LOST when it's settled.`,
   claimed: (repName: string, ref: number, what: string) => `${repName} took ref ${ref}: ${what}.`,
   alreadyTaken: (repName: string) => `Already taken by ${repName}.`,
-  acknowledged: () => ``, // "let me think": no reply, logged only
 };
 
 /** The order card after a confirmed deal, in the field order of a typical order entry. */

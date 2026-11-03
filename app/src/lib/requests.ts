@@ -13,7 +13,7 @@ export const REPEAT_WINDOW_MS = 3 * 60 * 60 * 1000;
 export type Extracted = ExtractedRequest & { resolvedLines: ResolvedLine[] };
 
 /** Digits only; a leading US country code is dropped so 1-312… and 312… match. */
-export const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "").replace(/^1(\d{10})$/, "$1");
+export const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "").replace(/^011(\d{10,})$/, "$1").replace(/^1(\d{10})$/, "$1");
 /** E.164 for US/Canada (10 digits) and anything longer with its own country code; shorter is not a phone number. */
 export const toE164 = (s: string | null | undefined): string | null => {
   const d = digits(s);
@@ -93,7 +93,10 @@ export async function createRequest(db: Db, input: CreateRequestInput) {
   const repeat = await findRecentOpenRequest(db, customerId, x.callbackNumber, now);
   if (repeat) {
     const flags = Array.from(new Set([...repeat.flags, "repeat_caller"]));
-    await db.update(schema.requests).set({ flags }).where(eq(schema.requests.id, repeat.id));
+    const acted = await db.select({ id: schema.decisions.id }).from(schema.decisions).where(and(eq(schema.decisions.requestId, repeat.id), eq(schema.decisions.undone, false))).limit(1);
+    // Nobody has acted yet: the newest version of the order is the one on the card.
+    if (!acted.length && x.type === "new_order" && x.resolvedLines.length) await replaceLines(db, repeat.id, x.resolvedLines);
+    await db.update(schema.requests).set({ flags, callbackPermission: x.callbackPermission ?? repeat.callbackPermission }).where(eq(schema.requests.id, repeat.id));
     await db.insert(schema.events).values({ customerId, requestId: repeat.id, type: "request.repeat_contact", payload: { channel, at: now.toISOString(), summary: x.summary } });
     return { request: { ...repeat, flags }, merged: true as const };
   }
@@ -115,6 +118,7 @@ export async function createRequest(db: Db, input: CreateRequestInput) {
     }
   }
   if (!request) throw new Error("could not allocate a reference number");
+  if (!request.transcriptUrl) await db.update(schema.requests).set({ transcriptUrl: `${process.env.APP_URL ?? "http://localhost:3000"}/panel/requests/${request.id}` }).where(eq(schema.requests.id, request.id));
   await replaceLines(db, request.id, x.resolvedLines);
   await db.insert(schema.events).values({ customerId, requestId: request.id, type: "request.created", payload: { channel, type: x.type, flags, language: x.language } });
   return { request, merged: false as const, buyer, isNew };

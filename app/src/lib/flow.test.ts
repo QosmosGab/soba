@@ -10,7 +10,7 @@ import { handleRepMessage } from "./decisions";
 import { executeDecision, handleCallbackOutcome, handleBuyerOfferReply } from "./callbacks";
 import { sentEvents } from "@/inngest/send";
 import type { ExtractedRequest, ResolvedLine } from "./extract";
-import { parseRuleCommand, applyRuleCommand, resolveUntil } from "./rules";
+import { parseRuleCommand, applyRuleCommand, answerSheetReadBack, resolveUntil } from "./rules";
 import { buildSummary, whatsappSummary, emailSummary, windowStartFor } from "./summary";
 import { nightlyTick } from "@/inngest/functions";
 
@@ -211,9 +211,13 @@ describe("price rule commands", () => {
 
   it("goes live, pauses and reports status", async () => {
     const now = new Date("2026-11-09T01:00:00Z"); // Sun 6pm Arizona
-    const live = await applyRuleCommand(db, { customerId, memberId: ruben.id, cmd: parseRuleCommand("romas 5x6 7.25 400; 4x4 VR 8.75 500")!, now });
-    expect(live).toContain("Loaded 2 prices, live until Mon 6:00 AM");
-    expect(live).toContain("• 5x6 Roma tomatoes $7.25 up to 400 cases");
+    const staged = await applyRuleCommand(db, { customerId, memberId: ruben.id, cmd: parseRuleCommand("romas 5x6 7.25 400; 4x4 VR 8.75 500")!, now });
+    if (typeof staged === "string") throw new Error("typed rules should be staged for a YES");
+    expect(staged.text).toContain("Loaded 2 prices, live until Mon 6:00 AM");
+    expect(staged.text).toContain("• 5x6 Roma tomatoes $7.25 up to 400 cases");
+    expect(staged.text).toContain("Reply YES to go live");
+    const live = await answerSheetReadBack(db, { customerId, memberId: ruben.id, sheetId: staged.pendingSheetId, text: "yes", now });
+    expect(live.live).toBe(true);
     const paused = await applyRuleCommand(db, { customerId, memberId: ruben.id, cmd: { kind: "pause", target: "Roma tomatoes" }, now });
     expect(paused).toContain("Paused 5x6 Roma tomatoes");
     const status = await applyRuleCommand(db, { customerId, memberId: ruben.id, cmd: { kind: "status" }, now });

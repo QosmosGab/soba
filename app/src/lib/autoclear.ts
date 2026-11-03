@@ -12,7 +12,7 @@ export type LiveRule = {
   minPrice: number; caseLimit: number; casesCleared: number; on: boolean; expiresAt: Date;
 };
 
-export type AutoClearSettings = { autoClear: boolean; implausiblePricePct: number };
+export type AutoClearSettings = { autoClear: boolean; implausiblePricePct: number; answering?: boolean };
 
 export type AutoClearResult =
   | { clear: true; lines: Array<{ rule: LiveRule; cases: number; price: number }> }
@@ -32,6 +32,7 @@ export function decideAutoClear(args: {
   lines: ResolvedLine[]; rules: LiveRule[]; settings: AutoClearSettings; offHours: boolean; now: Date;
 }): AutoClearResult {
   const { lines, rules, settings, offHours, now } = args;
+  if (settings.answering === false) return { clear: false, reason: "the desk is switched off tonight", condition: 1 };
   if (!settings.autoClear) return { clear: false, reason: "auto-clear is off", condition: 1 };
   if (!offHours) return { clear: false, reason: "desk is open; auto-clear runs after hours only", condition: 1 };
   if (!lines.length) return { clear: false, reason: "no order lines", condition: 2 };
@@ -40,6 +41,7 @@ export function decideAutoClear(args: {
   const claimed = new Map<string, number>(); // cases already taken from a rule by an earlier line in this order
   for (const line of lines) {
     if (line.fulfillment === "delivered") return { clear: false, reason: "delivered-price request", condition: 6 };
+    if (line.fulfillment !== "collect") return { clear: false, reason: "pickup not confirmed as the buyer's truck", condition: 6 };
     if (line.cases == null || line.priceOffered == null) return { clear: false, reason: "quantity or price missing", condition: 3 };
     const rule = rules.find((r) => r.on && r.expiresAt > now && ruleMatches(r, line));
     if (!rule) return { clear: false, reason: `no live rule for ${line.productCanonical ?? line.product}${line.size ? ` ${line.size}` : ""}`, condition: 2 };

@@ -10,7 +10,8 @@ import { handleRepMessage } from "@/lib/decisions";
 import { panelActor } from "@/lib/panel-data";
 import { parsePriceSheet, stagePriceSheet, answerSheetReadBack, applyRuleCommand, goLive, defaultExpiry } from "@/lib/rules";
 import { sendMorningSummary } from "@/lib/summary";
-import { nextOpening } from "@/lib/hours";
+import { nextOpening, snapToQuarter } from "@/lib/hours";
+import { validTimeZone } from "@/lib/time";
 import { placeForwardingTest } from "@/lib/providers/twilio";
 import { sendToRep } from "@/lib/messaging";
 import { toE164 } from "@/lib/requests";
@@ -139,7 +140,8 @@ export async function setOnCall(form: FormData) {
 
 export async function saveCompany(form: FormData) {
   const { customer, db } = await ctx();
-  await db.update(schema.customers).set({ name: str(form, "name") || customer.name, timezone: str(form, "timezone") || customer.timezone }).where(eq(schema.customers.id, customer.id));
+  const tz = str(form, "timezone");
+  await db.update(schema.customers).set({ name: str(form, "name") || customer.name, timezone: tz && validTimeZone(tz) ? tz : customer.timezone }).where(eq(schema.customers.id, customer.id));
   revalidatePath("/panel", "layout");
 }
 
@@ -166,7 +168,8 @@ export async function toggleMember(form: FormData) {
 export async function saveHours(form: FormData) {
   const { customer, db } = await ctx();
   const hours: Record<string, { open: string; close: string; closed: boolean }> = {};
-  for (const d of ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]) hours[d] = { open: str(form, `${d}_open`) || "06:00", close: str(form, `${d}_close`) || "17:00", closed: !on(form, `${d}_open_switch`) };
+  for (const d of ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]) hours[d] = { open: snapToQuarter(str(form, `${d}_open`) || "06:00"), close: snapToQuarter(str(form, `${d}_close`) || "17:00"), closed: !on(form, `${d}_open_switch`) };
+  if (Object.values(hours).every((h) => h.closed)) throw new Error("At least one day must be open");
   const holidays = str(form, "holidays").split(/[\n,]/).map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
   await db.update(schema.settings).set({ hours, holidays }).where(eq(schema.settings.customerId, customer.id));
   revalidatePath("/panel/settings");
@@ -203,8 +206,8 @@ export async function sendTestSummary() {
   const { customer, db, now } = await ctx();
   const [s] = await db.select().from(schema.settings).where(eq(schema.settings.customerId, customer.id));
   const opening = nextOpening(now, s.hours, customer.timezone, s.holidays);
-  // A test never blocks the real one: it is keyed on a window one second off.
-  await sendMorningSummary(db, customer.id, new Date(opening.getTime() + 1000), now);
+  // A test goes to the owner only, and never blocks the real one: it is keyed on a window one second off.
+  await sendMorningSummary(db, customer.id, new Date(opening.getTime() + 1000), now, { onlyMemberId: (await panelActor(db, customer.id))?.id });
   revalidatePath("/panel/settings");
 }
 
@@ -217,7 +220,7 @@ export async function saveLines(form: FormData) {
     blockedNumbers: str(form, "blockedNumbers").split(/[\n,]/).map((s) => toE164(s.trim())).filter((x): x is string => Boolean(x)),
     testNumbers: str(form, "testNumbers").split(/[\n,]/).map((s) => toE164(s.trim())).filter((x): x is string => Boolean(x)),
     retentionMonths: num(form, "retentionMonths") ?? 12,
-    samePricesPromptTime: /^\d{2}:\d{2}$/.test(str(form, "samePricesPromptTime")) ? str(form, "samePricesPromptTime") : "17:30",
+    samePricesPromptTime: /^\d{2}:\d{2}$/.test(str(form, "samePricesPromptTime")) ? snapToQuarter(str(form, "samePricesPromptTime")) : "17:30",
     escalationMinutes: num(form, "escalationMinutes") ?? 10,
   }).where(eq(schema.settings.customerId, customer.id));
   revalidatePath("/panel/settings");

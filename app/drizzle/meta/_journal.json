@@ -22,6 +22,20 @@
       "when": 1793712499139,
       "tag": "0002_bent_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793713398396,
+      "tag": "0003_gorgeous_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793713743605,
+      "tag": "0004_closed_sunfire",
+      "breakpoints": true
     }
   ]
 }

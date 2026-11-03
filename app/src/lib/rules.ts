@@ -11,6 +11,7 @@ import { normalizePack, normalizeProduct, normalizeSize } from "./produce";
 import { nextOpening } from "./hours";
 import { loadCustomer } from "./cards";
 import { fmtMoney } from "./card";
+import { localParts } from "./time";
 
 export type ParsedRule = { product: string; size: string | null; pack: string | null; minPrice: number; caseLimit: number; note?: string };
 
@@ -25,21 +26,20 @@ const WEEKDAY = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 /** "till Mon 7am", "until monday 7:00", "hasta el lunes 7am" → an instant in the customer's time zone. */
 export function resolveUntil(phrase: string, now: Date, timeZone: string): Date | null {
   const p = phrase.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const day = WEEKDAY.findIndex((d) => p.includes(d)) >= 0 ? WEEKDAY.findIndex((d) => p.includes(d)) : (["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"].findIndex((d) => p.includes(d)));
+  const en = WEEKDAY.findIndex((d) => p.includes(d));
+  const day = en >= 0 ? en : ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"].findIndex((d) => p.includes(d));
   const time = p.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
   if (day < 0 && !time) return null;
   let hour = time ? Number(time[1]) : 7;
   const minute = time?.[2] ? Number(time[2]) : 0;
   if (time?.[3] === "pm" && hour < 12) hour += 12;
   if (time?.[3] === "am" && hour === 12) hour = 0;
-  // Walk forward in 15-minute steps until the local weekday and time match.
-  const step = 15 * 60 * 1000;
+  // Walk forward minute by minute until the local weekday and time match.
+  const step = 60 * 1000;
   let t = new Date(Math.ceil(now.getTime() / step) * step);
-  for (let i = 0; i < 8 * 24 * 4; i++, t = new Date(t.getTime() + step)) {
-    const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, hour: "2-digit", minute: "2-digit", weekday: "short" }).formatToParts(t);
-    const get = (k: string) => parts.find((x) => x.type === k)!.value;
-    const wd = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(get("weekday"));
-    if ((day < 0 || wd === day) && Number(get("hour")) % 24 === hour && Number(get("minute")) === minute) return t;
+  for (let i = 0; i < 8 * 24 * 60; i++, t = new Date(t.getTime() + step)) {
+    const l = localParts(t, timeZone);
+    if ((day < 0 || l.weekday === day) && l.minutes === hour * 60 + minute) return t;
   }
   return null;
 }
@@ -58,6 +58,9 @@ function parseRuleLine(line: string): ParsedRule | null {
   const price = nums.find((n) => n > 0.5 && n < 200 && (!Number.isInteger(n) || n < 60));
   const cases = nums.find((n) => Number.isInteger(n) && n >= 10 && n !== price);
   if (!product || price == null || cases == null) return null;
+  // What's left after the product, size, pack and numbers must be nothing much: a sentence is not a rule.
+  const leftover = rest.replace(/\$?\d+(?:\.\d+)?/g, " ").replace(/\b(vr|vine[- ]?ripes?|romas?|tov|bells?|peppers?|tomato(es)?|red|yellow|green|xl|lg|large|medium|small|jumbo|cs|cases?|cajas?|up to|max|each|per|a|at|@|the|of|and|y|de|hasta|till|until|for)\b/gi, " ").replace(/[^a-z]+/gi, " ").trim().split(/\s+/).filter(Boolean);
+  if (leftover.length > 2) return null;
   return { product, size, pack, minPrice: price, caseLimit: cases };
 }
 
@@ -103,16 +106,17 @@ export async function defaultExpiry(db: Db, customerId: string, now: Date): Prom
   return { expires: nextOpening(now, settings.hours, customer.timezone, settings.holidays), timezone: customer.timezone };
 }
 
-/** Applies a parsed command for a rep who may set prices. Returns the reply text. */
-export async function applyRuleCommand(db: Db, args: { customerId: string; memberId: string; cmd: RuleCommand; now: Date }): Promise<string> {
+/** Applies a parsed command for a rep who may set prices. Typed rules come back staged (pendingSheetId) for a YES. */
+export async function applyRuleCommand(db: Db, args: { customerId: string; memberId: string; cmd: RuleCommand; now: Date }): Promise<string | { text: string; pendingSheetId: string }> {
   const { customerId, memberId, cmd, now } = args;
   const { expires: defaultExp, timezone } = await defaultExpiry(db, customerId, now);
   switch (cmd.kind) {
     case "rules": {
-      const expires = (cmd.until ? resolveUntil(cmd.until, now, timezone) : null) ?? defaultExp;
-      const [sheet] = await db.insert(schema.priceSheets).values({ customerId, receivedVia: "command", parsed: cmd.rules, sentById: memberId, parsedAt: now }).returning();
-      await goLive(db, { customerId, sheetId: sheet.id, memberId, rules: cmd.rules, expiresAt: expires, now });
-      return `${readBack(cmd.rules, expires, timezone)}\nReply FIX to change something, or PAUSE ALL to stop.`;
+      // Read back before anything goes live, like a sheet. Rules never outlive the next opening.
+      const asked = cmd.until ? resolveUntil(cmd.until, now, timezone) : null;
+      const expires = asked && asked < defaultExp ? asked : defaultExp;
+      const staged = await stagePriceSheet(db, { customerId, memberId, parsed: { rules: cmd.rules.map((r) => ({ ...r, note: r.note ?? null })), question: null, language: "en" }, receivedVia: "command", rawText: null, now, expiresAt: expires });
+      return { text: staged.text, pendingSheetId: staged.sheet.id };
     }
     case "pause": case "resume": {
       const live = await db.select().from(schema.priceRules).where(and(eq(schema.priceRules.customerId, customerId), gt(schema.priceRules.expiresAt, now)));
@@ -198,12 +202,14 @@ export async function fixPriceSheet(rules: ParsedRule[], fix: string): Promise<z
 }
 
 /** Stores a parsed sheet as pending and returns the read-back for the rep (Yes / Fix). */
-export async function stagePriceSheet(db: Db, args: { customerId: string; memberId: string; parsed: z.infer<typeof SheetSchema>; receivedVia: string; fileUrl?: string | null; rawText?: string | null; now: Date }) {
+export async function stagePriceSheet(db: Db, args: { customerId: string; memberId: string; parsed: z.infer<typeof SheetSchema>; receivedVia: string; fileUrl?: string | null; rawText?: string | null; now: Date; expiresAt?: Date }) {
+  const { expires: defaultExp, timezone } = await defaultExpiry(db, args.customerId, args.now);
+  const expires = args.expiresAt && args.expiresAt < defaultExp ? args.expiresAt : defaultExp;
   const [sheet] = await db.insert(schema.priceSheets).values({
     customerId: args.customerId, receivedVia: args.receivedVia, fileUrl: args.fileUrl ?? null, rawText: args.rawText ?? null,
     parsed: args.parsed.rules.map((r) => ({ ...r, note: r.note ?? undefined })), question: args.parsed.question, sentById: args.memberId, parsedAt: args.now,
+    expiresAt: expires,
   }).returning();
-  const { expires, timezone } = await defaultExpiry(db, args.customerId, args.now);
   const text = args.parsed.rules.length
     ? `${readBack(args.parsed.rules.map((r) => ({ ...r, note: r.note ?? undefined })), expires, timezone)}\n${args.parsed.question ? `One question: ${args.parsed.question}\n` : ""}Reply YES to go live, or tell me what to fix.`
     : `I couldn't find prices on that sheet.${args.parsed.question ? ` ${args.parsed.question}` : ""} Send a clearer photo or type them, e.g. "4x4 VR 8.50 600".`;
@@ -215,8 +221,11 @@ export async function answerSheetReadBack(db: Db, args: { customerId: string; me
   const [sheet] = await db.select().from(schema.priceSheets).where(eq(schema.priceSheets.id, args.sheetId));
   if (!sheet || !sheet.parsed) return { text: "That sheet is no longer pending. Send it again.", live: false };
   const t = args.text.trim().toLowerCase();
-  if (/^(yes|y|si|sí|ok|okay|looks right|go live|go|dale|correct|correcto)\b/.test(t)) {
-    const { expires, timezone } = await defaultExpiry(db, args.customerId, args.now);
+  // A plain yes goes live; "yes but change 4x4 to 8.75" is a fix.
+  if (/^(yes|y|si|sí|ok|okay|looks right|go live|go|dale|correct|correcto)[\s.!]*$/.test(t)) {
+    if (!sheet.parsed.length) return { text: "Nothing to go live: no prices were read. Send a clearer photo or type them, e.g. \"4x4 VR 8.50 600\".", live: false };
+    const { expires: defaultExp, timezone } = await defaultExpiry(db, args.customerId, args.now);
+    const expires = sheet.expiresAt && sheet.expiresAt < defaultExp && sheet.expiresAt > args.now ? sheet.expiresAt : defaultExp;
     await goLive(db, { customerId: args.customerId, sheetId: sheet.id, memberId: args.memberId, rules: sheet.parsed, expiresAt: expires, now: args.now });
     return { text: `Live. ${sheet.parsed.length} price${sheet.parsed.length === 1 ? "" : "s"} until ${expires.toLocaleString("en-US", { timeZone: timezone, weekday: "short", hour: "numeric", minute: "2-digit" }).replace(",", "")}.`, live: true };
   }

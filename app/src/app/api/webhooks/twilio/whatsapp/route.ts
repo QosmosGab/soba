@@ -6,6 +6,7 @@ import { getDb, schema } from "@/db";
 import { env } from "@/lib/env";
 import { readForm, verifyTwilio, stripWhatsApp } from "@/lib/providers/twilio";
 import { handleRepMessage, getThread, setThread } from "@/lib/decisions";
+import { parseRepReplyFast } from "@/lib/reply";
 import { parseRuleCommand, applyRuleCommand, parsePriceSheet, stagePriceSheet, answerSheetReadBack } from "@/lib/rules";
 import { sendToRep } from "@/lib/messaging";
 import { memberByCell, recordInbound, twiml, json, safeError } from "@/lib/http";
@@ -40,8 +41,12 @@ export async function POST(req: Request) {
     const thread = await getThread(db, member.id);
     const mediaCount = Number(params.NumMedia ?? 0);
 
-    // Price sheets and commands (only reps allowed to set prices).
-    if (member.canSetPrices) {
+    // Price sheets and commands (only reps allowed to set prices). A clear card reply ("approve", "8.50 max 200",
+    // "take") while a sheet or the nightly prompt is pending goes to the card; the price question stays pending.
+    const fast = parseRepReplyFast(body);
+    const cardReply = Boolean(payload) || (fast != null && fast.action !== "acknowledged" && fast.action !== "unclear" && !/^(yes|y|si|sí|ok|okay|no|nope)[\s.!]*$/i.test(body));
+    const askingAboutCard = ["awaiting_counter", "awaiting_reason"].includes(thread.state);
+    if (member.canSetPrices && !cardReply && !askingAboutCard) {
       if (mediaCount > 0 && params.MediaUrl0) {
         const type = params.MediaContentType0 ?? "application/octet-stream";
         if (!/^(image\/|application\/pdf)/.test(type)) { await reply("I can read PDFs and photos of the price sheet. Excel isn't supported yet: export it as PDF or type the prices, e.g. \"4x4 VR 8.50 600\"."); return twiml(); }
@@ -60,7 +65,8 @@ export async function POST(req: Request) {
       }
       if (thread.state === "awaiting_same_prices" && /^(yes|y|si|sí|same|ok|dale)\b/i.test(body)) {
         await setThread(db, member.id, { state: "idle" });
-        await reply(await applyRuleCommand(db, { customerId: member.customerId, memberId: member.id, cmd: { kind: "same" }, now }));
+        const same = await applyRuleCommand(db, { customerId: member.customerId, memberId: member.id, cmd: { kind: "same" }, now });
+        await reply(typeof same === "string" ? same : same.text);
         return twiml();
       }
       if (thread.state === "awaiting_same_prices" && /^(no|nope|not tonight)\b/i.test(body)) {
@@ -70,8 +76,9 @@ export async function POST(req: Request) {
       }
       const cmd = parseRuleCommand(body);
       if (cmd) {
-        await setThread(db, member.id, { state: "idle" });
-        await reply(await applyRuleCommand(db, { customerId: member.customerId, memberId: member.id, cmd, now }));
+        const r = await applyRuleCommand(db, { customerId: member.customerId, memberId: member.id, cmd, now });
+        if (typeof r === "string") { await setThread(db, member.id, { state: "idle" }); await reply(r); }
+        else { await setThread(db, member.id, { state: "awaiting_sheet_ok", pendingSheetId: r.pendingSheetId }); await reply(r.text); }
         return twiml();
       }
       // Long multi-line text that isn't a clean command: try reading it as a sheet.
