@@ -13,7 +13,7 @@ import { toE164 } from "./requests";
 import { resolvePickupDate } from "./produce";
 import { saysYes } from "./buyer-text";
 import { parseRuleCommand } from "./rules";
-import { nightlyTick } from "@/inngest/functions";
+import { nightlyTick } from "./clock";
 import { deskTool } from "./tool";
 import type { ExtractedRequest, ResolvedLine } from "./extract";
 

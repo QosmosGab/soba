@@ -1,59 +1,16 @@
-// Timers: the undo window, card escalation, callback retries, and the nightly
-// clock (same-prices prompt, forwarding test, morning summary) that runs every
-// five minutes and fires whatever is due per customer, idempotently.
+// The nightly clock: everything on a schedule, checked every five minutes by the
+// Vercel Cron route for every live customer. Every action is idempotent (keyed on
+// the local day in the events table), so a missed or doubled tick is harmless.
 import { and, eq, gt, gte, inArray, isNotNull, lt } from "drizzle-orm";
-import { inngest } from "./client";
 import { getDb, schema } from "@/db";
-import { executeDecision, retryCallback, handleCallbackOutcome } from "@/lib/callbacks";
-import { remindOnCard, loadCustomer } from "@/lib/cards";
-import { nextOpening } from "@/lib/hours";
-import { sendMorningSummary } from "@/lib/summary";
-import { samePricesPromptText } from "@/lib/rules";
-import { setThread, getThread } from "@/lib/decisions";
-import { sendToRep } from "@/lib/messaging";
-import { placeForwardingTest } from "@/lib/providers/twilio";
-
-export const decisionTimer = inngest.createFunction(
-  { id: "decision-undo-window", triggers: [{ event: "soba/decision.made" }] },
-  async ({ event, step }) => {
-    const { decisionId } = event.data as { decisionId: string };
-    const deadline = await step.run("read-deadline", async () => {
-      const db = await getDb();
-      const [d] = await db.select().from(schema.decisions).where(eq(schema.decisions.id, decisionId));
-      return d?.undoDeadline?.toISOString() ?? null;
-    });
-    if (deadline) await step.sleepUntil("undo-window", new Date(deadline));
-    return step.run("execute", async () => executeDecision(await getDb(), decisionId, new Date()));
-  },
-);
-
-export const cardEscalation = inngest.createFunction(
-  { id: "card-escalation", triggers: [{ event: "soba/card.sent" }] },
-  async ({ event, step }) => {
-    const { requestId, customerId } = event.data as { requestId: string; customerId: string };
-    const minutes = await step.run("settings", async () => (await loadCustomer(await getDb(), customerId)).settings.escalationMinutes);
-    await step.sleep("wait-for-reply", `${minutes}m`);
-    const reminded = await step.run("remind-on-call", async () => remindOnCard(await getDb(), requestId, new Date(), "oncall"));
-    if (!reminded) return { done: "claimed" };
-    const opening = await step.run("next-opening", async () => {
-      const db = await getDb();
-      const { customer, settings } = await loadCustomer(db, customerId);
-      return nextOpening(new Date(), settings.hours, customer.timezone, settings.holidays).toISOString();
-    });
-    await step.sleepUntil("until-opening", new Date(opening));
-    return step.run("remind-owner", async () => remindOnCard(await getDb(), requestId, new Date(), "owner"));
-  },
-);
-
-export const callbackRetry = inngest.createFunction(
-  { id: "callback-retry", triggers: [{ event: "soba/callback.retry" }] },
-  async ({ event, step }) => {
-    await step.sleep("wait", "10m");
-    return step.run("retry", async () => retryCallback(await getDb(), (event.data as { callbackId: string }).callbackId, new Date()));
-  },
-);
-
-import { localParts, toMinutes as toMin } from "@/lib/time";
+import { handleCallbackOutcome } from "./callbacks";
+import { nextOpening } from "./hours";
+import { sendMorningSummary } from "./summary";
+import { samePricesPromptText } from "./rules";
+import { setThread, getThread } from "./decisions";
+import { sendToRep } from "./messaging";
+import { placeForwardingTest } from "./providers/twilio";
+import { localParts, toMinutes as toMin } from "./time";
 
 /** Everything on a clock, checked every five minutes for every live customer. */
 export async function nightlyTick(now = new Date()) {
@@ -146,10 +103,3 @@ async function tickCustomer(db: Awaited<ReturnType<typeof getDb>>, c: typeof sch
     return did;
   }
 }
-
-export const nightlyClock = inngest.createFunction(
-  { id: "nightly-clock", triggers: [{ cron: "*/5 * * * *" }] },
-  async ({ step }) => step.run("tick", () => nightlyTick(new Date())),
-);
-
-export const functions = [decisionTimer, cardEscalation, callbackRetry, nightlyClock];

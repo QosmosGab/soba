@@ -9,7 +9,7 @@ import { afterTap, fmtMoney, undoWord } from "./card";
 import { notifyOtherRecipients, loadCustomer } from "./cards";
 import { sendToRep } from "./messaging";
 import { parseRepReply, parseRepReplyFast, type RepReply } from "./reply";
-import { inngestSend } from "@/inngest/send";
+import { startTimer } from "./timers";
 
 type Member = typeof schema.teamMembers.$inferSelect;
 type Thread = typeof schema.repThreads.$inferSelect;
@@ -304,7 +304,7 @@ export async function handleRepMessage(db: Db, args: { member: Member; text: str
       const d = await record({ action: "approve", quantity: reply.cases, undoDeadline }, "decision.approve", { cases: reply.cases });
       await say(afterTap.approve(first, cases, price, request.channel, undo), request.id);
       await notifyOtherRecipients(db, request.id, member.id, `approved${cases != null ? ` ${cases} cs` : ""}`, now);
-      await inngestSend({ name: "soba/decision.made", data: { decisionId: d.id, requestId: request.id, customerId: member.customerId } });
+      await startTimer({ kind: "decision", decisionId: d.id, requestId: request.id, customerId: member.customerId });
       return done("approve", request.id);
     }
     case "counter": {
@@ -316,7 +316,7 @@ export async function handleRepMessage(db: Db, args: { member: Member; text: str
       const d = await record({ action: "counter", counterPrice: reply.price.toFixed(2), quantity: reply.cases, undoDeadline }, "decision.counter", { price: reply.price, cases: reply.cases });
       await say(afterTap.counterSet(first, reply.price, reply.cases, request.channel, undo), request.id);
       await notifyOtherRecipients(db, request.id, member.id, `countered ${fmtMoney(reply.price)}`, now);
-      await inngestSend({ name: "soba/decision.made", data: { decisionId: d.id, requestId: request.id, customerId: member.customerId } });
+      await startTimer({ kind: "decision", decisionId: d.id, requestId: request.id, customerId: member.customerId });
       return done("counter", request.id);
     }
     case "reject": {
@@ -329,7 +329,7 @@ export async function handleRepMessage(db: Db, args: { member: Member; text: str
       const d = await record({ action: "reject", reason: reply.reason, undoDeadline }, "decision.reject", { reason: reply.reason });
       await say(`Telling ${first} we can't fill it${reply.reason ? ` (${reply.reason})` : ""}. ${undo}`, request.id);
       await notifyOtherRecipients(db, request.id, member.id, "rejected", now);
-      await inngestSend({ name: "soba/decision.made", data: { decisionId: d.id, requestId: request.id, customerId: member.customerId } });
+      await startTimer({ kind: "decision", decisionId: d.id, requestId: request.id, customerId: member.customerId });
       return done("reject", request.id);
     }
   }

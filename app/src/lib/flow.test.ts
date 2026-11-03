@@ -8,11 +8,11 @@ import { DEFAULT_HOURS } from "./hours";
 import { handleIntake } from "./intake";
 import { handleRepMessage } from "./decisions";
 import { executeDecision, handleCallbackOutcome, handleBuyerOfferReply } from "./callbacks";
-import { sentEvents } from "@/inngest/send";
+import { scheduled } from "./timers";
 import type { ExtractedRequest, ResolvedLine } from "./extract";
 import { parseRuleCommand, applyRuleCommand, answerSheetReadBack, resolveUntil } from "./rules";
 import { buildSummary, whatsappSummary, emailSummary, windowStartFor } from "./summary";
-import { nightlyTick } from "@/inngest/functions";
+import { nightlyTick } from "./clock";
 
 process.env.SOBA_DRY_RUN = "1";
 
@@ -61,7 +61,7 @@ describe("intake", () => {
   });
 
   it("sends a card to the scheduled reps when the offer is below the rule, and starts the escalation clock", async () => {
-    sentEvents.length = 0;
+    scheduled.length = 0;
     const r = await handleIntake(db, { customerId, channel: "call", transcript: "Buyer: 300 cs at 8.25", now: new Date(SUN_2AM.getTime() + 5 * 60 * 60 * 1000), callerId: "+17735550111", providerConversationId: "conv_card", extracted: extracted({ callbackNumber: "773-555-0111", callerName: "Ana Ruiz", callerCompany: "Fresh Way", callerCity: "Toronto" }) });
     expect(r.outcome).toBe("card_sent");
     if (r.outcome !== "card_sent") return;
@@ -70,7 +70,7 @@ describe("intake", () => {
     const cards = msgs.filter((m) => m.party === "rep" && m.body?.includes("NEW REQUEST · ref 1002"));
     expect(new Set(cards.map((m) => m.memberId))).toEqual(new Set([ruben.id, miguel.id]));
     expect(cards[0].body).toContain("Ana Ruiz · Fresh Way (Toronto) · 773-555-0111");
-    expect(sentEvents.some((e) => e.name === "soba/card.sent")).toBe(true);
+    expect(scheduled.some((e) => e.kind === "escalation")).toBe(true);
   });
 
   it("logs spam without a card", async () => {
@@ -94,14 +94,14 @@ describe("rep decisions", () => {
   });
 
   it("a typed price completes the counter, with an undo window, and the others are told", async () => {
-    sentEvents.length = 0;
+    scheduled.length = 0;
     const now = new Date(SUN_2AM.getTime() + 5 * 60 * 60 * 1000 + 120_000);
     const r = await handleRepMessage(db, { member: ruben, text: "8.50 max 200", now });
     expect(r.action).toBe("counter");
     expect(r.replies[0]).toBe("Calling Ana with $8.50 for up to 200 cs, once. Reply UNDO within 2 minutes to stop.");
     const [d] = await db.select().from(schema.decisions).where(eq(schema.decisions.requestId, requestId));
     expect(d.counterPrice).toBe("8.50"); expect(d.quantity).toBe(200);
-    expect(sentEvents.find((e) => e.name === "soba/decision.made")).toBeTruthy();
+    expect(scheduled.find((e) => e.kind === "decision")).toBeTruthy();
     const toMiguel = (await msgsFor(requestId)).filter((m) => m.memberId === miguel.id && m.body?.includes("took ref 1002"));
     expect(toMiguel[0].body).toBe("Ruben took ref 1002: countered $8.50.");
   });

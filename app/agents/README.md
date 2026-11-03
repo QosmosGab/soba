@@ -46,9 +46,9 @@ Button ids carry the action and request id (`approve:<uuid>`); the app sets them
 
 Business verification for Project Peach Inc. on the WhatsApp sender. Before it clears, the sender is limited to 250 unique recipients per day, which is plenty for pilots.
 
-## Inngest
+## Timers (Vercel Workflows + Vercel Cron)
 
-`POST {APP_URL}/api/inngest` is the serve endpoint. Set `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY`; the nightly clock runs every five minutes and the undo, escalation and retry timers are event-driven.
+No extra account. The undo window, card escalation and callback retry are durable workflows in `src/workflows/timers.ts` (visible under Observability → Workflows in the Vercel project). The nightly clock is `GET /api/cron/tick`, scheduled every five minutes by `vercel.json`; set `CRON_SECRET` on the project so only Vercel can call it.
 
 ## Email
 

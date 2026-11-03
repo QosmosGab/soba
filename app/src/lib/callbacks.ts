@@ -11,7 +11,7 @@ import { sendToBuyer, sendToRep } from "./messaging";
 import { placeCallback } from "./providers/elevenlabs";
 import { buyerText, fillConfirmation, langOf, pickupWord, saysNo, saysYes, type Lang } from "./buyer-text";
 import { env } from "./env";
-import { inngestSend } from "@/inngest/send";
+import { startTimer } from "./timers";
 import { extractRequest } from "./extract";
 import { replaceLines } from "./requests";
 
@@ -231,7 +231,7 @@ export async function handleCallbackOutcome(db: Db, conversationId: string, o: C
     case "no_answer": {
       if (cb.attempts < 1) {
         await db.update(schema.callbacks).set({ attempts: 1, lastAttemptAt: now }).where(eq(schema.callbacks.id, cb.id));
-        await inngestSend({ name: "soba/callback.retry", data: { callbackId: cb.id, requestId: request.id, customerId: request.customerId } });
+        await startTimer({ kind: "callbackRetry", callbackId: cb.id, requestId: request.id, customerId: request.customerId });
         return { done: "retry_scheduled" as const };
       }
       await db.update(schema.callbacks).set({ outcome: "no_answer" }).where(eq(schema.callbacks.id, cb.id));

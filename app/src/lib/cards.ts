@@ -8,7 +8,7 @@ import { cardButtons, cardTemplateVariables, requestCard, afterTap, type CardInp
 import type { ResolvedLine } from "./extract";
 import { sendToRep, type RepSend } from "./messaging";
 import { ringRep } from "./providers/twilio";
-import { inngestSend } from "@/inngest/send";
+import { startTimer } from "./timers";
 import { localParts, toMinutes } from "./time";
 import { DAY_KEYS } from "./hours";
 
@@ -97,7 +97,7 @@ export async function dispatchCard(db: Db, requestId: string, now: Date) {
       await db.insert(schema.events).values({ customerId: request.customerId, requestId, type: "card.urgent_ring", payload: { memberId: onCall.id } });
     }
   }
-  await inngestSend({ name: "soba/card.sent", data: { requestId, customerId: request.customerId } });
+  await startTimer({ kind: "escalation", requestId, customerId: request.customerId });
   return { recipients: sent };
 }
 
