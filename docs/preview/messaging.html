@@ -804,7 +804,7 @@ function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*
 function links(){
   const sec=(n,id)=>{const e=document.querySelector('[data-framer-name="'+n+'"]'); if(e&&!e.id) e.id=id;};
   sec('Feature Section','how'); sec('Demo Section','demo'); sec('Integration Section','setup'); sec('Solutions Section','solution');
-  const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=window.SB_PAGE!=='contact'; const H=onHome?'':'/';
+  const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=!window.SB_PAGE||window.SB_PAGE==='home'; const H=onHome?'':'/';
   const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','Send an email':'mailto:hello@usesoba.com','Text us':'sms:+14808198035','Call us':'tel:+14808198035','Privacy':'/privacy','Terms':'/terms'};
   document.querySelectorAll('a').forEach(a=>{ const t=a.textContent.replace(/\s+/g,' ').trim(); const key=Object.keys(MAPL).find(k=>t===k||t===k+' '+k||t===k+k); const href=a.getAttribute('href')||'';
     if(key){ if(a.getAttribute('href')!==MAPL[key]) a.setAttribute('href',MAPL[key]); if(/^https:/.test(MAPL[key])){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }

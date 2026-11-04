@@ -663,7 +663,7 @@ h2.framer-text,.sb-feat .head h2{font-size:34px!important;line-height:1.12!impor
 </ul>
 
 <h2>4. Messaging consent</h2>
-<p>Buyers are asked on the call or text whether Soba may call or text them back about their request, and reps opt in on WhatsApp before anything else is sent. Anyone can stop messages by replying STOP. Our <a href="/messaging.html">SMS and WhatsApp policy</a> describes this in full.</p>
+<p>Buyers are asked on the call or text whether Soba may call or text them back about their request, and reps opt in on WhatsApp before anything else is sent. Anyone can stop messages by replying STOP. Our <a href="/messaging">SMS and WhatsApp policy</a> describes this in full.</p>
 
 <h2>5. Retention</h2>
 <p>Transcripts, notes and message records are kept for 12 months by default; customers can shorten this in their settings. Audio recordings, where enabled, are kept for 90 days unless the customer sets a shorter period. Account information is kept while the account is active and for up to three years after, for billing and legal purposes. When a customer leaves Soba, their conversation records are returned or deleted on request.</p>
@@ -735,7 +735,7 @@ h2.framer-text,.sb-feat .head h2{font-size:34px!important;line-height:1.12!impor
 </ul>
 
 <h2>4. Messaging consent</h2>
-<p>Buyers are asked on the call or text whether Soba may call or text them back about their request, and reps opt in on WhatsApp before anything else is sent. Anyone can stop messages by replying STOP. Our <a href="/messaging.html">SMS and WhatsApp policy</a> describes this in full.</p>
+<p>Buyers are asked on the call or text whether Soba may call or text them back about their request, and reps opt in on WhatsApp before anything else is sent. Anyone can stop messages by replying STOP. Our <a href="/messaging">SMS and WhatsApp policy</a> describes this in full.</p>
 
 <h2>5. Retention</h2>
 <p>Transcripts, notes and message records are kept for 12 months by default; customers can shorten this in their settings. Audio recordings, where enabled, are kept for 90 days unless the customer sets a shorter period. Account information is kept while the account is active and for up to three years after, for billing and legal purposes. When a customer leaves Soba, their conversation records are returned or deleted on request.</p>
@@ -876,7 +876,7 @@ function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*
 function links(){
   const sec=(n,id)=>{const e=document.querySelector('[data-framer-name="'+n+'"]'); if(e&&!e.id) e.id=id;};
   sec('Feature Section','how'); sec('Demo Section','demo'); sec('Integration Section','setup'); sec('Solutions Section','solution');
-  const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=window.SB_PAGE!=='contact'; const H=onHome?'':'/';
+  const CAL='https://calendar.app.google/pWPid79eAXuna1nh8'; const onHome=!window.SB_PAGE||window.SB_PAGE==='home'; const H=onHome?'':'/';
   const MAPL={'How it works':H+'#how','Set up':H+'#setup','Solution':H+'#solution','Contact us':'/contact','Home':onHome?'#':'/','soba':onHome?'#':'/','Book a demo':CAL,'Pick a time':CAL,'Ask a question':'/contact','Contact':'/contact','Send an email':'mailto:hello@usesoba.com','Text us':'sms:+14808198035','Call us':'tel:+14808198035','Privacy':'/privacy','Terms':'/terms'};
   document.querySelectorAll('a').forEach(a=>{ const t=a.textContent.replace(/\s+/g,' ').trim(); const key=Object.keys(MAPL).find(k=>t===k||t===k+' '+k||t===k+k); const href=a.getAttribute('href')||'';
     if(key){ if(a.getAttribute('href')!==MAPL[key]) a.setAttribute('href',MAPL[key]); if(/^https:/.test(MAPL[key])){ a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }
