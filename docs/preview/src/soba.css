@@ -22,6 +22,8 @@ body.sb-scrolled .framer-6odade-container [data-framer-name="Button Text"] *{col
 .framer-aqtgzr{left:2px!important;right:2px!important;bottom:0!important;top:var(--sb-imgtop,520px)!important;height:auto!important;opacity:1!important;transform:none!important;overflow:hidden}
 .framer-aqtgzr img{object-fit:cover!important;object-position:center top!important;opacity:0;transform:translateY(18px);transition:opacity 1.2s ease,transform 1.2s ease;will-change:transform}
 body.sb-ready .framer-aqtgzr img{opacity:1;transform:translateY(var(--sb-par,0px))}
+/* once the reveal has played, the parallax transform must track the scroll directly: a transition on it makes the image chase the page and look jittery */
+body.sb-live .framer-aqtgzr img{transition:opacity 1.2s ease}
 #sb-chat{display:none!important}
 .framer-1rufxlr{left:2px!important;right:2px!important;top:0!important;bottom:0!important;width:auto!important;height:auto!important;opacity:1!important;transform:none!important}
 footer [data-framer-name="Spacer"]{display:none!important}
