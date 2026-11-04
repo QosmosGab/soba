@@ -256,18 +256,24 @@ if LEGAL:
 h = re.sub(r'<link rel="(?:icon|apple-touch-icon)"[^>]*framerusercontent[^>]*>', '', h)
 style += '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">'
 if PAGE == '404': style += '<meta name="robots" content="noindex">'
+style += '<meta http-equiv="Content-Security-Policy" content="img-src \'self\' data: blob:">'  # the template bundle still requests its own images for sections we hide; block them at the browser
 style += '<script defer src="/_vercel/insights/script.js"></script>'
 h = h.replace('</head>', style + '</head>', 1)
 script = '<script id="soba-page">window.SB_PAGE=%s;window.SB_TITLE=%s;</script>' % (json.dumps(PAGE), json.dumps(TITLE)) + script
 script += '<script id="soba-js">' + (ROOT/'soba.js').read_text() + '</script>'
 h = h.replace('</body>', script + '</body>', 1)
 # hero illustration -> our farmland image
-h = re.sub(r'srcset="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'srcset="img/hero.webp 2400w"', h)
-h = re.sub(r'src="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'src="img/hero.webp"', h)
-h = re.sub(r'srcset="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'srcset="img/cta.jpg?v=3 2400w"', h)
-h = re.sub(r'src="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'src="img/cta.jpg?v=3"', h)
-h = re.sub(r'srcset="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'srcset="img/hero.webp 2400w"', h)
-h = re.sub(r'src="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'src="img/hero.webp"', h)
+PAT={'9c47fOR3CNoSsEtr6IEYJoKM':'pattern-grid.svg','8Li3bEi2pBFSRCKmHpW1kYBntrg':'pattern-dots.svg','wGAHOWhVswEtWkOKTJN6s2CW0':'pattern-dots.svg'}
+for pid,pf in PAT.items(): h = re.sub(r'url\(https://framerusercontent\.com/images/'+pid+r'\.svg[^)]*\)', 'url(/img/'+pf+')', h)
+HERO_SS='img/hero-800.webp 800w, img/hero-1200.webp 1200w, img/hero-1600.webp 1600w, img/hero-2400.webp 2400w'
+CTA_SS='img/cta-800.webp 800w, img/cta-1200.webp 1200w, img/cta-1600.webp 1600w, img/cta-2400.webp 2400w'
+SIZES='(max-width: 809.98px) 100vw, (max-width: 1199.98px) calc(100vw - 32px), min(100vw - 40px, 1440px)'
+h = re.sub(r'srcset="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'srcset="%s"' % HERO_SS, h)
+h = re.sub(r'src="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'src="img/hero-1600.webp"', h)
+h = re.sub(r'srcset="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'srcset="%s"' % CTA_SS, h)
+h = re.sub(r'src="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'src="img/cta-1600.webp"', h)
+h = re.sub(r'srcset="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'srcset="%s"' % HERO_SS, h)
+h = re.sub(r'src="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'src="img/hero-1600.webp"', h)
 print("image refs left:", h.count('epYjC31PopakdO7OcpxMsWS2y0'), h.count('Pai7r7UdkYU5XAvtSCnRGv7lC8'))
 h = re.sub(r'<title>.*?</title>', '<title>%s</title>' % TITLE, h, count=1)
 

@@ -48,7 +48,7 @@ addEventListener('resize',()=>heroFit()); addEventListener('scroll',heroParallax
 function stats(){
   const c=$('[data-framer-name="Logo Section"] [data-framer-name="Container"]'); if(!c||$('#sb-stats',c)) return;
   c.appendChild(el(`<div id="sb-stats" class="sb-stats"><p class="t">What desks running Soba got back in the last 90 days</p><div><b>$5M</b><span>Volume transacted</span></div><div><b>1,500</b><span>Orders taken</span></div><div><b>600 hrs</b><span>Saved for sales desks</span></div></div>`));
-  [['rgba(0,153,255,.45)','14%'],['rgba(255,169,0,.4)','72%']].forEach(([col,l])=>{ const s=el('<div class="sb-splotch"></div>'); s.style.cssText=`position:absolute;left:${l};top:50%;transform:translateY(-50%);width:170px;height:170px;z-index:0;filter:blur(26px);opacity:.4;mix-blend-mode:multiply;border-radius:50%;pointer-events:none;background:radial-gradient(circle, ${col} 0%, rgba(255,255,255,0) 68%)`; c.appendChild(s); });
+  [['rgba(0,153,255,.45)','14%'],['rgba(255,169,0,.4)','72%']].forEach(([col,l])=>{ const s=el('<div class="sb-splotch"></div>'); s.style.cssText=`position:absolute;left:${l};top:50%;transform:translateY(-50%);width:170px;height:170px;z-index:0;opacity:.4;border-radius:50%;pointer-events:none;background:radial-gradient(circle, ${col} 0%, rgba(255,255,255,0) 68%)`; c.appendChild(s); });
 }
 function footer(){
   const hd=$('[data-framer-name="Footer"] [data-framer-name="Header"], footer [data-framer-name="Header"]'); if(!hd||$('#sb-contact',hd)) return;
@@ -59,7 +59,8 @@ function footer(){
     <a href="sms:+14808198035" title="Text 480 819 8035" aria-label="Text">${icon.sms}</a>
     <a href="tel:+14808198035" title="Call 480 819 8035" aria-label="Call">${icon.phone}</a></div>`));
 }
-function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*="epYjC31"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/hero.webp'; }); document.querySelectorAll('img[src*="D8cPRFjF76"],img[srcset*="D8cPRFjF76"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/hero.webp'; }); document.querySelectorAll('img[src*="Pai7r7Udk"],img[srcset*="Pai7r7Udk"]').forEach(im=>{ im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.src='img/cta.jpg?v=3'; }); }
+const SB_SIZES='(max-width: 809.98px) 100vw, (max-width: 1199.98px) calc(100vw - 32px), min(100vw - 40px, 1440px)'; const sbSet=(im,n)=>{ const ss=[800,1200,1600,2400].map(w=>`img/${n}-${w}.webp ${w}w`).join(', '); if(im.getAttribute('srcset')!==ss){ im.setAttribute('sizes',SB_SIZES); im.setAttribute('srcset',ss); im.src=`img/${n}-1600.webp`; } };
+function heroImage(){ document.querySelectorAll('img[src*="epYjC31"],img[srcset*="epYjC31"],img[src*="D8cPRFjF76"],img[srcset*="D8cPRFjF76"]').forEach(im=>{ sbSet(im,'hero'); im.setAttribute('fetchpriority','high'); }); document.querySelectorAll('img[src*="Pai7r7Udk"],img[srcset*="Pai7r7Udk"]').forEach(im=>sbSet(im,'cta')); }
 function links(){
   const sec=(n,id)=>{const e=document.querySelector('[data-framer-name="'+n+'"]'); if(e&&!e.id) e.id=id;};
   sec('Feature Section','how'); sec('Demo Section','demo'); sec('Integration Section','setup'); sec('Solutions Section','solution');
@@ -201,7 +202,10 @@ function contactForm(){
 function icons(){ document.querySelectorAll('link[rel="icon"][href*="framerusercontent"],link[rel="apple-touch-icon"][href*="framerusercontent"]').forEach(l=>l.remove()); }
 /* phone: the dotted line between the Solutions section and the CTA reads as a box; hide the Solutions section's bottom line */
 function phoneLines(){ if(!matchMedia('(max-width:700px)').matches) return; const sec=document.querySelector('[data-framer-name="Solutions Section"]'); if(!sec) return; const ls=[...sec.querySelectorAll('[data-framer-name="BG Line"]')].filter(e=>e.getBoundingClientRect().width>0); if(ls.length<2) return; ls.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top); ls[ls.length-1].style.display='none'; }
-function all(){ try{ phoneLines(); icons(); heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
+const PAT={'9c47fOR3CNoSsEtr6IEYJoKM':'pattern-grid.svg','8Li3bEi2pBFSRCKmHpW1kYBntrg':'pattern-dots.svg','wGAHOWhVswEtWkOKTJN6s2CW0':'pattern-dots.svg'};
+/* the template's dot/grid pattern tiles are served from its own host, which the CSP now blocks for images; point them at local copies */
+function patterns(){ document.querySelectorAll('[style*="framerusercontent.com/images/"]').forEach(e=>{ const m=(e.style.backgroundImage||'').match(/images\/([A-Za-z0-9]+)\.svg/); if(m&&PAT[m[1]]) e.style.backgroundImage='url(/img/'+PAT[m[1]]+')'; }); }
+function all(){ try{ patterns(); phoneLines(); icons(); heroImage(); chips(); hero(); heroFit(); stats(); footer(); footerCols(); navContact(); legal(); contactCards(); contactForm(); links(); feature(); hub(); rows(); if(document.readyState==='complete') splotches(); }catch(e){ console.warn('soba layer', e); } }
 window.sobaLayer=all;
 /* Framer 'appear' sometimes never fires for a variant (seen on the contact page's phone layout): after load, reveal anything still at its pre-animation opacity inside the viewport. Below-the-fold scroll reveals stay as they are. */
 function appearFallback(){ document.querySelectorAll('[style*="opacity: 0.001"],[style*="opacity:0.001"]').forEach(e=>{ const r=e.getBoundingClientRect(); if(r.bottom>0&&r.top<innerHeight&&r.width>0&&parseFloat(getComputedStyle(e).opacity)<0.01){ e.style.opacity='1'; e.style.transform='none'; } }); }

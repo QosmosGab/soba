@@ -3,7 +3,7 @@
 /* text scale: proportional, via Framer's own size variable */
 h1.framer-text,h2.framer-text,h3.framer-text,h4.framer-text,h5.framer-text,p.framer-text{font-size:calc(var(--framer-font-size,16px)*1.12)!important}
 /* watercolor splotches, straddling the dotted rails */
-.sb-splotch{position:absolute;width:340px;height:340px;border-radius:50%;pointer-events:none;filter:blur(38px);opacity:.55;mix-blend-mode:multiply}
+.sb-splotch{position:absolute;width:340px;height:340px;border-radius:50%;pointer-events:none;opacity:.5}/* no filter or blend mode: both force the GPU to recomposite the blob against moving page content on every scroll frame */
 /* type scale: one size for section titles, one for subtitles */
 h2.framer-text{font-size:44px!important;line-height:1.1!important;letter-spacing:-1.4px!important;font-weight:500!important}
 [data-framer-name="Integration Section"] [data-framer-name="Left"] p.framer-text,[data-framer-name="Solutions Section"] [data-framer-name="Center"] p.framer-text{font-size:19px!important;line-height:1.45!important}
@@ -122,7 +122,7 @@ footer [data-framer-name="Footer Nav Links"]{align-items:flex-start!important}
 [data-framer-name="Demo Section"]{overflow:visible!important}
 
 .sb-screen{height:2700px;width:100%!important;flex:none;position:relative;font-family:Inter,sans-serif}
-.sb-screen .bg{position:absolute;inset:0;background:url(img/cta.jpg) center/cover no-repeat;opacity:.9}
+.sb-screen .bg{position:absolute;inset:0;background:url(img/cta-1600.webp) center/cover no-repeat;opacity:.9}
 .sb-screen .sticky{position:sticky;top:calc(50vh - 340px);height:680px;padding:0 64px}
 .sb-screen .frame{position:relative;width:100%;max-width:1308px;height:646px;margin:0 auto;border-radius:14px;background:#fff;border:1px solid rgba(0,0,0,.12);box-shadow:0 30px 80px rgba(0,0,0,.22);overflow:hidden}
 .sb-screen .pane{position:absolute;inset:0;opacity:0;transition:opacity .45s ease;display:grid;grid-template-columns:220px 1fr}
