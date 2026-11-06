@@ -43,7 +43,7 @@ CONTACT_MAP = [
  ("Just researching", "Voicemail and callbacks"), ("Evaluating tools / comparing options", "A rep's cell phone"), ("Already have a solution, looking to switch", "Text or WhatsApp"),
  ("Anything else you'd like us to know?", "Message"),
  ("Send message", "Send"),
- ("Got a question? We'll get back to you within 24 hours.", "Got a question? We reply within one business day."),
+ ("Got a question? We'll get back to you within 24 hours.", "Got a question? We reply within one business day. Project Peach Inc. · 575 Fifth Avenue, New York, NY 10017 · (480) 819-8035"),
  ("hello@nexura.ai", "Send an email"),
  ("Join the community", "Book a demo"),
  ("Stay up to date with product news, tips, and updates.", "Thirty minutes on a call, with your line and your price sheet."),
@@ -138,7 +138,7 @@ MAP = [
  ("The AI agent built for modern marketing teams.", "Revenue solutions for the produce supply chain"),
  ("Platform", "Soba"), ("Demo", "Book a demo"), ("Blog", "How it works"), ("Solutions", "Solution"),
  ("Terms of Services", "Terms"), ("Privacy Policy", "Privacy"),
- ("Designed by Lunis. All rights reserved.", "© 2026 Soba AI. All rights reserved."),
+ ("Designed by Lunis. All rights reserved.", "© 2026 Project Peach Inc., doing business as Soba AI · 575 Fifth Avenue, New York, NY 10017 · (480) 819-8035"),
  ("Nexura", "soba"),
 ]
 if PAGE == 'contact': MAP = CONTACT_MAP + MAP
