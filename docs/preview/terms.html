@@ -647,6 +647,10 @@ footer div:has(> p.framer-text a) p,footer div:has(> p.framer-text a) a{white-sp
 .g-stack .c.l1{width:92%}.g-stack .c.l2{width:84%}.g-stack .c.l3{width:76%}.g-stack .c.l4{width:68%}
 }
 @media(min-width:801px) and (max-width:1279px){.sb-stats div{padding:0 12px}.sb-stats b{font-size:clamp(30px,3.9vw,46px)}}
+/* responsive pass 2: on laptops/tablets the sticky outcome menu leaves no room for the graphics */
+@media(min-width:901px) and (max-width:1365px){.sb-rows{grid-template-columns:1fr}.sb-rows .labels{display:none}}
+@media(min-width:901px) and (max-width:1060px){.sb-row{grid-template-columns:1fr}.sb-row p{max-width:560px}}
+.g-desk .list div span{white-space:normal;overflow:visible;text-overflow:clip}
 </style><style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style><template id="sb-legal-src"><p>These terms govern use of the Soba service and the usesoba.com website, provided by Project Peach Inc., doing business as Soba AI ("Soba", "we", "us"). By creating an account, running a pilot, or otherwise using Soba, you ("the customer", "you") agree to these terms on behalf of your business. If you have signed an order form or pilot agreement with us, that document controls where it differs from these terms.</p>
 
 <h2>1. The service</h2>

@@ -647,6 +647,10 @@ footer div:has(> p.framer-text a) p,footer div:has(> p.framer-text a) a{white-sp
 .g-stack .c.l1{width:92%}.g-stack .c.l2{width:84%}.g-stack .c.l3{width:76%}.g-stack .c.l4{width:68%}
 }
 @media(min-width:801px) and (max-width:1279px){.sb-stats div{padding:0 12px}.sb-stats b{font-size:clamp(30px,3.9vw,46px)}}
+/* responsive pass 2: on laptops/tablets the sticky outcome menu leaves no room for the graphics */
+@media(min-width:901px) and (max-width:1365px){.sb-rows{grid-template-columns:1fr}.sb-rows .labels{display:none}}
+@media(min-width:901px) and (max-width:1060px){.sb-row{grid-template-columns:1fr}.sb-row p{max-width:560px}}
+.g-desk .list div span{white-space:normal;overflow:visible;text-overflow:clip}
 </style><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta http-equiv="Content-Security-Policy" content="img-src 'self' data: blob:"><script defer src="/_vercel/insights/script.js"></script></head>
 <body>
 	<script async src="https://events.framer.com/script?v=2" data-fid="3d58e3fe0f86490d50175929f54e5fb51a4769e67529d30864ef8c9180f4db86" data-no-nt></script>
