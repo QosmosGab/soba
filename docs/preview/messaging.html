@@ -639,6 +639,14 @@ h2.framer-text,.sb-feat .head h2{font-size:34px!important;line-height:1.12!impor
 .v-bd em.g{background:#E7F7EE;color:#167A47}.v-bd em.b{background:#E6F4FF;color:#0062A3}.v-bd em.o{background:#FFF1DE;color:#B45309}
 .mock.on .v-bd .r{animation:v-in .45s ease forwards}.mock.on .v-bd .r:nth-child(1){animation-delay:.4s}.mock.on .v-bd .r:nth-child(2){animation-delay:.7s}.mock.on .v-bd .r:nth-child(3){animation-delay:1s}
 @media(max-width:700px){.v-bd{width:100%;max-width:100%}.v-bd .top{padding:12px 14px 10px}.v-bd .r{padding:10px 14px}}
+/* responsive pass: footer legal line wraps; stack cards stay inside their frame on phones */
+footer div:has(> p.framer-text a){max-width:100%;white-space:normal!important}
+footer div:has(> p.framer-text a) p,footer div:has(> p.framer-text a) a{white-space:normal!important}
+@media(max-width:700px){
+.g-stack .c,.g-stack .c.new{width:100%}
+.g-stack .c.l1{width:92%}.g-stack .c.l2{width:84%}.g-stack .c.l3{width:76%}.g-stack .c.l4{width:68%}
+}
+@media(min-width:801px) and (max-width:1279px){.sb-stats div{padding:0 12px}.sb-stats b{font-size:clamp(30px,3.9vw,46px)}}
 </style><style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style><template id="sb-legal-src"><p>Soba, a product of Project Peach Inc., doing business as Soba AI ("Soba", "we"), sends and receives text messages (SMS) and WhatsApp messages as part of an order-taking service for produce sellers (our "customers"). This page explains who gets messages from us, how they agree to it, and how to stop.</p>
 
 <h2>Who receives messages</h2>
