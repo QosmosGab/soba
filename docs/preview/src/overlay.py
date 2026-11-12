@@ -29,90 +29,90 @@ elif LEGAL:
     body = lsrc[lsrc.find('</p>', lsrc.find('<p class="muted">')) + 4:]
     body = body[:body.rfind('</main>')] if '</main>' in body else body
     LEGAL_HTML = body.strip()
-TITLE = {'home': 'Soba - Revenue solutions for produce companies', 'contact': 'Contact - Soba', '404': 'Page not found - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
-OGTITLE = {'home': 'Soba. Your sales desk now answers 24/7', 'contact': 'Contact Soba'}.get(PAGE, TITLE)
+TITLE = {'home': 'Soba - AI solutions for produce companies', 'contact': 'Contact - Soba', '404': 'Page not found - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
+OGTITLE = {'home': 'Soba. AI for the produce business', 'contact': 'Contact Soba'}.get(PAGE, TITLE)
 CANON = 'https://usesoba.com/' + ('' if PAGE == 'home' else PAGE)
 
 CONTACT_MAP = [
- ("Start the conversation. We're ready to help.", "Tell us about your desk."),
+ ("Start the conversation. We're ready to help.", "Tell us about your business."),
  ("Let's talk about what intelligent automation can do for your business. Tell us where you're at and we'll figure out the rest.",
-  "What you sell, where your buyers are, and how orders reach you after close. We reply within one business day."),
+  "Tell us what you sell and where your team loses the most time. We reply within one business day."),
  ("What best describes you?", "What kind of operation?"),
  ("Marketing Agency", "Grower-shipper"), ("In-house Marketing Team", "Importer"), ("AI Consultant", "Wholesaler"), ("Startup Founder", "Distributor"),
- ("Where are you in your journey?", "How do after-hours orders reach you today?"),
- ("Just researching", "Voicemail and callbacks"), ("Evaluating tools / comparing options", "A rep's cell phone"), ("Already have a solution, looking to switch", "Text or WhatsApp"),
+ ("Where are you in your journey?", "Where does your team lose the most time?"),
+ ("Just researching", "Sales and follow-ups"), ("Evaluating tools / comparing options", "Order entry"), ("Already have a solution, looking to switch", "Operations and reporting"),
  ("Anything else you'd like us to know?", "Message"),
  ("Send message", "Send"),
  ("Got a question? We'll get back to you within 24 hours.", "Got a question? We reply within one business day. Project Peach Inc. · 575 Fifth Avenue, New York, NY 10017 · (480) 819-8035"),
  ("hello@nexura.ai", "Send an email"),
  ("Join the community", "Book a demo"),
- ("Stay up to date with product news, tips, and updates.", "Thirty minutes on a call, with your line and your price sheet."),
+ ("Stay up to date with product news, tips, and updates.", "Thirty minutes on a call to find where AI saves your team the most."),
  ("Follow us on X", "Pick a time"),
  ("Talk to sales", "Text or call"),
  ("Prefer to talk it out? Our team is available Mon\u2013Fri, 9am\u20136pm.", "Prefer to talk it out? Text or call and a founder picks up."),
  ("+1 (800) 123-4567", "Text us"),
  ("Can I switch plans or cancel anytime?", "Does Soba speak Spanish?"),
  ("Absolutely. All plans are flexible with no long-term contracts. You can upgrade, downgrade, or cancel at any time.",
-  "Yes. It answers in whichever language the buyer uses, English or Spanish, and reads every number back before it confirms."),
- ("Do you offer custom or enterprise pricing?", "What happens when a buyer asks for a price below my sheet?"),
+  "Yes. Everything we build works in English and Spanish."),
+ ("Do you offer custom or enterprise pricing?", "Will AI make commitments for us?"),
  ("Yes. If your team has specific needs, reach out via the form or book a call with sales and we'll put together a custom plan.",
-  "Nothing gets confirmed. The request goes to your on-call rep on WhatsApp to approve, counter, reject or take over."),
- ("How quickly will I hear back after submitting the form?", "How quickly do you answer clients?"),
+  "No. It works inside the rules you set. Anything outside them goes to a person on your team first."),
+ ("How quickly will I hear back after submitting the form?", "Do we need to change our systems?"),
  ("We typically respond within 1 business day. For urgent inquiries, feel free to email us directly.",
-  "Instantly. Soba answers the phone and replies to texts 24 hours a day, 7 days a week."),
- ("What kind of support is included with my plan?", "What do I need to set up?"),
+  "No. We build on top of your ERP, email, phones and WhatsApp."),
+ ("What kind of support is included with my plan?", "How do we get started?"),
  ("All plans include access to our help center and email support. Pro and Enterprise plans get priority support and a dedicated account manager.",
-  "Forward your line after close or after four rings, and text or email tonight's price sheet. That's it."),
- ("Can I integrate Nexura with my marketing tools?", "Can I keep my phone number?"),
+  "A 30-minute call. We look at where your team spends its time and pick the first thing to automate."),
+ ("Can I integrate Nexura with my marketing tools?", "Who is Soba for?"),
  ("Yes \u2014 Nexura connects with a wide range of tools including CRMs, email platforms, and analytics software. Check our integrations page for the full list.",
-  "Yes. Soba sits behind your existing line through call forwarding. Nothing changes for your buyers."),
+  "Grower-shippers, importers, wholesalers and distributors."),
 ]
 
 MAP = [
  # nav
- ("Product", "How it works"), ("Pricing", "Set up"), ("Integration", "Solution"), ("Resources", "Company"), ("Get started", "Book a demo"),
+ ("Product", "What we build"), ("Pricing", "How we work"), ("Integration", "Outcomes"), ("Resources", "Company"), ("Get started", "Book a demo"),
  # hero
- ("New Release Available", "After-hours sales desk for produce"),
- ("Scale faster with your AI Agent", "Your sales desk now answers 24/7"),
+ ("New Release Available", "AI for produce companies"),
+ ("Scale faster with your AI Agent", "AI built for the produce business."),
  ("Spend less time on logistics and more on strategy while Nexura handles the execution of your global marketing operations.",
-  "Soba picks up your company line after close, takes the buyer's order in English or Spanish, and confirms it at the prices you set."),
+  "We build AI for sales and operations teams in produce. Lower costs, more revenue, and hours back for your people."),
  ("Start for free", "Book a demo"), ("Talk to sales", "Contact us"),
  ("Aaron", "Ruben"), ("Sarah", "Marisol"),
  # intelligence section
  ("Marketing at full intelligence. Stop guessing, start growing — Nexura analyzes your data and delivers insights that actually move the needle.",
-  "Stop losing sales to missed calls."),
- ("Conversational AI Agent", "Voice and text desk"),
- ("Ask Nexura anything about your performance. Get data-backed recommendations instantly.", "Answers calls and texts after close, in English or Spanish. Reads every number back."),
- ("Campaign Tracking", "Price rule clearing"),
- ("Monitor ROI, conversions, and spend across every channel in real time. Spot what's working and cut what isn't.", "Checks each request against tonight's sheet and volume limits. Inside the rules, it's confirmed on the call."),
- ("Unified Dashboard", "Rep card on WhatsApp"),
- ("See your entire marketing operation from one central view. KPIs, trends, and activity feeds all live in one place.", "Anything outside the rules goes to your on-call reps: Approve, Counter, Reject or Take over."),
- ("Automated Workflow", "Morning summary"),
- ("Design and deploy multi-step agent journeys. Configure how Nexura thinks, acts, and reports — entirely on your terms.", "Fifteen minutes before opening: what was won, what's waiting, every transcript, and the order card."),
+  "Where AI pays off in produce."),
+ ("Conversational AI Agent", "Sales calls and follow-ups"),
+ ("Ask Nexura anything about your performance. Get data-backed recommendations instantly.", "Researches buyers, makes and answers calls, and follows up on every lead, in English or Spanish."),
+ ("Campaign Tracking", "Order entry"),
+ ("Monitor ROI, conversions, and spend across every channel in real time. Spot what's working and cut what isn't.", "Orders from phone, text, WhatsApp and email go into your system, checked against your price list."),
+ ("Unified Dashboard", "Approvals on WhatsApp"),
+ ("See your entire marketing operation from one central view. KPIs, trends, and activity feeds all live in one place.", "Anything that needs a person goes to the right rep, who can approve, counter or take over with one tap."),
+ ("Automated Workflow", "Daily summary"),
+ ("Design and deploy multi-step agent journeys. Configure how Nexura thinks, acts, and reports — entirely on your terms.", "What came in, what's waiting, and what needs a call."),
  # integrations
- ("Connects with your existing stack.", "Set it up in 5 minutes."),
- ("Nexura plugs into the tools your team already uses — no migration required.", "Plugs into your phone line. Controlled through WhatsApp."),
- ("Explore 50+ supported integrations", "Forward your line after close or after four rings"),
- ("Securely link your account", "Text or email tonight's price sheet"),
- ("Sync and streamline your workflow", "Reps approve exceptions on WhatsApp"),
+ ("Connects with your existing stack.", "Works with what you already use."),
+ ("Nexura plugs into the tools your team already uses — no migration required.", "Your ERP, email, phones and WhatsApp. No new system for your team."),
+ ("Explore 50+ supported integrations", "We find where your team loses the most time"),
+ ("Securely link your account", "We build on top of your systems"),
+ ("Sync and streamline your workflow", "Your team runs it from WhatsApp and email"),
  ("Explore all integrations", "See how it works"),
  # teams
  ("Built for every marketing team.", "More sales. Less chasing."),
- ("Whether you're a solo marketer or a full-service agency, Nexura adapts to the way you work.", "Every buyer answered. Every order written up. Every night."),
+ ("Whether you're a solo marketer or a full-service agency, Nexura adapts to the way you work.", "Lower costs, more revenue, and a team that spends its day selling."),
  ("For marketing team", "For grower-shippers"), ("For startup", "For importers"), ("For agency", "For wholesalers"),
  ("Stop manually pulling reports across platforms.", "Stop finding out about Thursday's loads on Friday."),
- ("Nexura connects to your ad channels and surfaces exactly where your budget is working hardest.", "Soba takes the night orders from Nogales, Salinas and the Valley and has the cards ready before the desk opens."),
+ ("Nexura connects to your ad channels and surfaces exactly where your budget is working hardest.", "Soba enters orders from Nogales, Salinas and the Valley and has the cards ready for your team."),
  ("Meta Ads", "Roma 5x6"), ("3 campaigns currently active", "320 cases, Fresh Valley, Thu pickup"),
  ("Google Ads", "Super cucumbers"), ("142 clicks tracked today", "200 cases confirmed at sheet"),
  ("ROI Score", "Price rules"), ("4.2x return this week", "9 of 10 cleared without a rep"),
  ("Budget Alert", "Below rule"), ("15% remaining on Q1 spend", "1 request waiting on a rep"),
  ("Top Channel", "Top buyer"), ("Paid search leading conversions", "Fresh Valley, 4 orders this week"),
  ("Do more with a lean marketing team.", "Do more with a lean sales desk."),
- ("Set your workflows once and let Nexura run your campaigns continuously in the background.", "Set your price rules once and let Soba take the orders every night."),
+ ("Set your workflows once and let Nexura run your campaigns continuously in the background.", "Set your rules once and let Soba handle the busywork."),
  ("Data Intake", "Buyer call"), ("Input", "Order"), ("Report", "Confirmation"), ("Output", "Order card"),
  ("Manage every client from one intelligent platform.", "Manage every buyer from one desk."),
  ("Deliver AI-powered recommendations and scheduled reports without the manual overhead.", "Written confirmations and a morning summary, without the manual overhead."),
- ("Ads Channels", "Night orders"), ("Conversion Trend", "Orders after close"),
+ ("Ads Channels", "Orders"), ("Conversion Trend", "Orders this week"),
  # testimonials
  ("Loved by teams worldwide.", "What the desks are saying."),
  ("From lean startups to global agencies, here's what our users have to say.", "Grower-shippers, importers and wholesalers running Soba on their line."),
@@ -133,10 +133,10 @@ MAP = [
  ("Agency", "Multi-desk"), ("149", "1,499"), ("109", "1,199"), ("Continue with Agency", "Talk to us"), ("For agencies managing clients", "For companies with several desks or lines"),
  ("Everything in Pro", "Everything in Desk"), ("Up to 15 client accounts", "Up to 5 lines"), ("Multi-account dashboard", "Shared price sheet across desks"), ("White-label report exports", "Order card export to your system"),
  # cta + footer
- ("Your best-performing campaign starts here.", "Book a demo, or just ask a question."),
- ("Set up in minutes. See results from day one.", "Thirty minutes on a call, or an email to hello@usesoba.com. Either way, a straight answer."),
- ("The AI agent built for modern marketing teams.", "Revenue solutions for the produce supply chain"),
- ("Platform", "Soba"), ("Demo", "Book a demo"), ("Blog", "How it works"), ("Solutions", "Solution"),
+ ("Your best-performing campaign starts here.", "Let's build it together."),
+ ("Set up in minutes. See results from day one.", "Thirty minutes on a call to find where AI saves your team the most."),
+ ("The AI agent built for modern marketing teams.", "AI solutions for the produce supply chain"),
+ ("Platform", "Soba"), ("Demo", "Book a demo"), ("Blog", "What we build"), ("Solutions", "Outcomes"),
  ("Terms of Services", "Terms"), ("Privacy Policy", "Privacy"),
  ("Designed by Lunis. All rights reserved.", "© 2026 Project Peach Inc., doing business as Soba AI · 575 Fifth Avenue, New York, NY 10017 · (480) 819-8035"),
  ("Nexura", "soba"),
@@ -279,7 +279,7 @@ h = re.sub(r'<title>.*?</title>', '<title>%s</title>' % TITLE, h, count=1)
 
 h = re.sub(r'mailto:\s*hello@nexura\.ai', 'mailto:hello@usesoba.com', h); h = re.sub(r'href="https://contra\.com/[^"]*"', 'href="/"', h).replace('tel:+18001234567', 'tel:+14808198035').replace('tel: 8001234567', 'sms:+14808198035')
 # head: Soba metadata instead of the template's
-DESC = LEGAL_DESC or "Soba picks up your company line after close, takes the buyer's order in English or Spanish, and confirms it at the prices you set."
+DESC = LEGAL_DESC or "We build AI for sales and operations teams in produce. Lower costs, more revenue, and hours back for your people."
 h = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="%s"><link rel="icon" href="/favicon.svg" type="image/svg+xml">' % CANON, h)
 h = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="%s">' % CANON, h)
 h = re.sub(r'<meta name="description" content="[^"]*">', '<meta name="description" content="%s">' % DESC, h)
