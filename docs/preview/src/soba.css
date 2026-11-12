@@ -249,7 +249,7 @@ footer [data-framer-name="Footer Nav Links"]{align-items:flex-start!important}
 .v-wa .acts span{text-align:center;font-size:13px;font-weight:600;padding:10px;border-radius:10px;background:#fff;border:1.5px solid #e4e4e4;position:relative}
 .v-wa .acts .go{border-color:#1DA462;color:#167A47}
 .mock.on .v-wa .acts .go{animation:v-ring 1.2s ease-out .6s 2}
-.mock.on .v-wa .acts .go::after{content:"Approved ✓";position:absolute;inset:0;display:grid;place-items:center;border-radius:9px;background:#1DA462;color:#fff;opacity:0;animation:v-fill .35s ease 3.1s forwards}
+.mock.on .v-wa .acts .go::after{content:"Quote sent ✓";position:absolute;inset:0;display:grid;place-items:center;border-radius:9px;background:#1DA462;color:#fff;opacity:0;animation:v-fill .35s ease 3.1s forwards}
 @keyframes v-ring{0%{box-shadow:0 0 0 0 rgba(29,164,98,.55)}100%{box-shadow:0 0 0 16px rgba(29,164,98,0)}}
 @keyframes v-fill{to{opacity:1}}
 /* 4. morning summary */
@@ -427,3 +427,19 @@ h2.framer-text,.sb-feat .head h2{font-size:34px!important;line-height:1.12!impor
 .sb-rows .right{gap:52px}
 .sb-row{gap:18px}
 }
+
+/* feature cards v2: assistant chat + business development */
+.v-wa .msg.me{background:#DCF8C6;margin-left:auto;margin-bottom:0;width:fit-content;max-width:78%;border-top-left-radius:12px;border-top-right-radius:3px}
+.v-wa .msg.so{max-width:82%;width:fit-content;opacity:0;transform:translateY(8px)}
+.mock.on .v-wa .msg.so{animation:v-in .45s ease 1s forwards}
+.v-bd{width:360px;background:#fff;border-radius:22px;border:1px solid #e6e6e6;box-shadow:0 20px 50px rgba(0,0,0,.08);overflow:hidden}
+.v-bd .top{padding:16px 18px 12px;border-bottom:1px solid #f0f0f0}
+.v-bd .from{font-size:12px;color:#777}.v-bd .subj{font-size:15px;font-weight:600;margin-top:3px}
+.v-bd .rows{padding:6px 0}
+.v-bd .r{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;border-bottom:1px solid #f3f3f3;opacity:0;transform:translateY(10px)}
+.v-bd .r:last-child{border-bottom:0}
+.v-bd .r b{display:block;font-size:14px}.v-bd .r span{font-size:12px;color:#777}
+.v-bd em{font-style:normal;font-size:11.5px;font-weight:600;border-radius:999px;padding:5px 10px;white-space:nowrap}
+.v-bd em.g{background:#E7F7EE;color:#167A47}.v-bd em.b{background:#E6F4FF;color:#0062A3}.v-bd em.o{background:#FFF1DE;color:#B45309}
+.mock.on .v-bd .r{animation:v-in .45s ease forwards}.mock.on .v-bd .r:nth-child(1){animation-delay:.4s}.mock.on .v-bd .r:nth-child(2){animation-delay:.7s}.mock.on .v-bd .r:nth-child(3){animation-delay:1s}
+@media(max-width:700px){.v-bd{width:100%;max-width:100%}.v-bd .top{padding:12px 14px 10px}.v-bd .r{padding:10px 14px}}
