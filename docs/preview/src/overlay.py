@@ -74,20 +74,13 @@ CONTACT_MAP = [
 ]
 
 MAP = [
- ("Product", "What we build"), ("Pricing", "How we work"), ("Integration", "Outcomes"),
+ ("Product", "What we build"), ("Integration", "Outcomes"),
  ("Resources", "Company"), ("Get started", "Talk to us"),
  ("New Release Available", "AI for distributors"),
  ("Scale faster with your AI Agent", "More time selling. Less time on busywork."),
  ("Spend less time on logistics and more on strategy while Nexura handles the execution of your global marketing operations.",
   "We build practical AI tools that help your team find sales opportunities, follow up with customers, and put quotes together. Built around the way you already work."),
- ("Start for free", "Talk to us"), ("Talk to sales", "See examples"),
- ("Connects with your existing stack.", "Works with what you already use."),
- ("Nexura plugs into the tools your team already uses — no migration required.",
-  "Your reps already work in email, spreadsheets, docs, and a CRM. We build the first version around the tools you use."),
- ("Explore 50+ supported integrations", "Show us one repetitive task"),
- ("Securely link your account", "We build the first version free"),
- ("Sync and streamline your workflow", "Your team tries it and shapes what comes next"),
- ("Explore all integrations", "Talk to us"),
+ ("Start for free", "Talk to us"), ("Talk to sales", "See workflows"),
  ("Built for every marketing team.", "More sales. Less chasing."),
  ("Whether you're a solo marketer or a full-service agency, Nexura adapts to the way you work.",
   "Find better opportunities and keep deals moving."),
@@ -222,7 +215,7 @@ h = h.replace('</head>', style + '</head>', 1)
 script = '<script id="soba-page">window.SB_PAGE=%s;window.SB_TITLE=%s;</script>' % (json.dumps(PAGE), json.dumps(TITLE)) + script
 script += '<script id="soba-js">' + (ROOT/'soba.js').read_text() + '</script>'
 if PAGE == 'home':
-    sections = '\n'.join((ROOT/name).read_text() for name in ('features.js', 'stack.js', 'outcomes.js'))
+    sections = '\n'.join((ROOT/name).read_text() for name in ('features.js', 'outcomes.js'))
     script = script.replace('/* HOME_SECTIONS */', sections)
 h = h.replace('</body>', script + '</body>', 1)
 # hero illustration -> our farmland image
@@ -298,7 +291,7 @@ def within(node, name):
         if p['attrs'].get('data-framer-name') == name: return True
         p = p.get('parent')
     return False
-remove_names = {'Demo Section', 'Logo Section', 'Testimonial Section', 'Pricing Section'}
+remove_names = {'Demo Section', 'Logo Section', 'Integration Section', 'Testimonial Section', 'Pricing Section'}
 if PAGE == 'contact': remove_names |= {'Info Section', 'FAQ Section'}
 edits = []
 for node in layout.nodes:
@@ -308,8 +301,12 @@ for node in layout.nodes:
         edits.append((node['start'], node['end'], ''))
     elif PAGE == 'home' and name == 'Container' and within(node, 'Feature Section'):
         edits.append((node['inner'], node['close'], ''))
-    elif PAGE == 'home' and name == 'Canvas' and within(node, 'Integration Section'):
-        edits.append((node['inner'], node['close'], ''))
+    elif node['tag'] == 'a' and node['attrs'].get('href') == './pricing' and not any(within(node,n) for n in remove_names):
+        label = norm(re.sub(r'<[^>]+>', '', h[node['inner']:node['close']]))
+        if label == 'Pricing':
+            parent = node['parent']
+            wrapper = parent if parent and parent['attrs'].get('class', '').endswith('-container') and 'end' in parent else node
+            edits.append((wrapper['start'], wrapper['end'], ''))
     elif PAGE == 'home' and node['tag'] == 'h1' and within(node, 'Hero'):
         edits.append((node['inner'], node['close'], '<span data-soba-heading>More time selling.</span> <span data-soba-heading>Less time on busywork.</span>'))
 for start, end, replacement in sorted(edits, reverse=True): h = h[:start] + replacement + h[end:]

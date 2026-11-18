@@ -19,7 +19,7 @@ function heroImage(){ document.querySelectorAll('img[src*="distribution-warehous
 const EMAIL='mailto:trustin@usesoba.com?subject=A%20workflow%20for%20our%20team';
 function links(){
   const home=window.SB_PAGE==='home'; const base=home?'':'/';
-  const map={'What we build':base+'#how','How we work':base+'#setup','How it works':base+'#how','Outcomes':base+'#solution','Home':home?'#':'/','soba':home?'#':'/','See examples':base+'#how','Talk to us':EMAIL,'Contact us':EMAIL,'Contact':EMAIL,'Send an email':EMAIL,'Book a demo':EMAIL,'Pick a time':EMAIL,'Privacy':'/privacy','Terms':'/terms'};
+  const map={'What we build':base+'#how','How it works':base+'#how','Outcomes':base+'#solution','Home':home?'#':'/','soba':home?'#':'/','See workflows':base+'#how','Talk to us':EMAIL,'Contact us':EMAIL,'Contact':EMAIL,'Send an email':EMAIL,'Book a demo':EMAIL,'Pick a time':EMAIL,'Privacy':'/privacy','Terms':'/terms'};
   document.querySelectorAll('a').forEach(a=>{
     const t=a.textContent.replace(/\s+/g,' ').trim(); const key=Object.keys(map).find(k=>t===k||t===k+' '+k||t===k+k);
     if(key){ if(a.getAttribute('href')!==map[key]) a.setAttribute('href',map[key]); a.removeAttribute('target'); }
@@ -31,7 +31,7 @@ function links(){
 function content(){
   document.querySelectorAll('nav [data-framer-name="Control"]').forEach(c=>{if(!c.querySelector('.sb-mobile-cta'))c.append(el('<a class="sb-mobile-cta" href="'+EMAIL+'">Talk to us</a>'));});
   ['Demo Section','Logo Section','Testimonial Section','Pricing Section'].forEach(n=>document.querySelectorAll('[data-framer-name="'+n+'"]').forEach(e=>e.remove()));
-  const sectionAnchors = {'Feature Section':'how', 'Integration Section':'setup', 'Solutions Section':'solution'};
+  const sectionAnchors = {'Feature Section':'how', 'Solutions Section':'solution'};
   for (const [name, anchor] of Object.entries(sectionAnchors)) {
     const section = $('[data-framer-name="'+name+'"]');
     if (section && section.id !== anchor) section.id = anchor;
@@ -58,7 +58,6 @@ function all() {
     heroFit();
     if (window.SB_PAGE === 'home') {
       feature();
-      hub();
       rows();
     }
   } catch (error) {

@@ -6,7 +6,7 @@ h1.framer-text,h2.framer-text,h3.framer-text,h4.framer-text,h5.framer-text,p.fra
 .sb-splotch{position:absolute;width:340px;height:340px;border-radius:50%;pointer-events:none;opacity:.5}/* no filter or blend mode: both force the GPU to recomposite the blob against moving page content on every scroll frame */
 /* type scale: one size for section titles, one for subtitles */
 h2.framer-text{font-size:44px!important;line-height:1.1!important;letter-spacing:-1.4px!important;font-weight:500!important}
-[data-framer-name="Integration Section"] [data-framer-name="Left"] p.framer-text,[data-framer-name="Solutions Section"] [data-framer-name="Center"] p.framer-text{font-size:19px!important;line-height:1.45!important}
+[data-framer-name="Solutions Section"] [data-framer-name="Center"] p.framer-text{font-size:19px!important;line-height:1.45!important}
 [data-framer-name="Solutions Section"] [data-framer-name="Center"]{width:900px!important;max-width:100%}
 [data-framer-name="Solutions Section"] [data-framer-name="Center"] p.framer-text{max-width:none!important;white-space:nowrap!important}
 /* nav */
@@ -57,10 +57,6 @@ footer [data-framer-name="Spacer"]{display:none!important}
 .sb-stats{flex-wrap:wrap}
 .sb-stats b{display:block;font-size:46px;white-space:nowrap;font-weight:500;letter-spacing:-1.4px;color:#000;line-height:1.05}.sb-stats span{display:block;margin-top:8px;font-size:15px;color:var(--sb-mute)}
 @media(max-width:800px){.sb-stats{flex-direction:column;gap:28px}.sb-stats div{border-left:0;max-width:none}}
-/* integration steps bigger */
-[data-framer-name="Integration Section"] [data-framer-name="Step"] p.framer-text{font-size:calc(var(--framer-font-size,16px)*1.3)!important}
-[data-framer-name="Integration Section"] [data-framer-name="Steps"]{gap:22px!important}
-[data-framer-name="Integration Section"] [data-framer-name="Integration Preview"]{border-radius:24px;overflow:hidden}
 /* CTA: no subtitle, bigger buttons */
 .framer-a2a9ii [data-framer-name="Left"] p.framer-text{display:none!important}
 .framer-a2a9ii [data-framer-name="Buttons"]{transform:scale(1.25);transform-origin:left center;margin-top:10px}
@@ -156,13 +152,6 @@ footer [data-framer-name="Footer Nav Links"]{align-items:flex-start!important}
 .sb-screen .dots{position:absolute;left:50%;top:664px;transform:translateX(-50%);display:flex;gap:8px}.sb-screen .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.15)}.sb-screen .dots i.on{background:#111}
 .sb-screen .cap{position:absolute;left:0;right:0;top:-40px;text-align:center;font-size:15px;color:#111;font-weight:500;text-shadow:0 1px 8px rgba(255,255,255,.9)}
 @media(max-width:900px){.sb-screen{height:auto;padding:30px 0}.sb-screen .sticky{position:relative;top:0;height:auto;padding:0 16px}.sb-screen .frame{height:auto}.sb-screen .pane{position:relative;opacity:1;grid-template-columns:1fr;margin-bottom:16px}.sb-screen .side{display:none}.sb-screen .msgs{grid-template-columns:1fr}.sb-screen .threads{display:none}.sb-screen .dots,.sb-screen .cap{display:none}.sb-screen table{display:block;overflow-x:auto;white-space:nowrap}}
-/* integration hub */
-[data-framer-name="Integration Section"] .framer-1thkj0m-container,[data-framer-name="Integration Section"] [data-framer-name="Integration Preview"]{display:none!important}
-[data-framer-name="Integration Section"] [data-framer-name="Canvas"]{border-radius:24px;overflow:hidden;position:relative}
-.sb-hub{position:absolute;inset:0;border-radius:24px;background:#fff;overflow:hidden;z-index:1}
-.sb-hub svg{width:100%;height:100%;overflow:visible}
-.sb-hub .node{font-family:Inter,sans-serif;font-size:13px;fill:#333}
-.sb-hub .tile{filter:drop-shadow(0 8px 16px rgba(0,0,0,.12))}
 /* solutions: stacked value rows */
 [data-framer-name="Solutions Section"]{height:auto!important}
 [data-framer-name="Solutions Section"] [data-framer-name="Container"]{height:auto!important}
@@ -387,7 +376,6 @@ label.framer-68cn0z,label.framer-23uauw{display:none!important}
 .sb-feat .stage{min-height:0}
 .sb-feat .mock{position:relative;inset:auto;display:none;padding:22px 16px}
 .sb-feat .mock.on{display:grid}
-[data-framer-name="Integration Section"] [data-framer-name="Canvas"]{min-height:330px;height:330px}
 .sb-row .gfx{min-height:0;padding:26px 0}
 [data-framer-name="Solutions Section"] [data-framer-name="Center"] p.framer-text{white-space:normal!important}
 .framer-1cvb5qb{width:100%!important;max-width:100%!important}
@@ -408,13 +396,9 @@ label.framer-68cn0z,label.framer-23uauw{display:none!important}
 .v-mail .cards{flex-direction:column;gap:6px;padding:0 14px 14px}
 .v-mail .cards i{height:auto;display:flex;align-items:baseline;gap:6px;padding:7px 10px;font-size:12px}
 .v-mail .cards i b{display:inline;font-size:12.5px}
-[data-framer-name="Integration Section"] [data-framer-name="Step"]{align-items:flex-start!important}
-[data-framer-name="Integration Section"] [data-framer-name="Number"]{margin-top:3px}
-.sb-hub{border:1px solid #0B1A2B;box-sizing:border-box}
 }
 /* pass 13: phone feedback (dividers, gaps, footer rails, title hierarchy) */
 @media(max-width:700px){
-[data-framer-name="Integration Section"] [data-framer-name="Divider"]{display:none!important}
 .framer-2mc3ra-container [data-framer-name="BG Line"],.framer-2mc3ra-container [data-framer-name="Pattern"]{display:none!important}
 .framer-tof4td-container{padding:14px 10px 10px;background:#fff}
 .framer-tof4td-container [data-framer-name="Main"]{border-radius:22px;overflow:hidden}
@@ -493,7 +477,7 @@ a:focus-visible{outline:3px solid #168b54!important;outline-offset:5px!important
 .sb-mobile-cta{display:none}
 @media(max-width:809px){nav [data-framer-name="Menu Button"]{display:none!important}.sb-mobile-cta{display:block;color:#0b1a2b;font:500 14px/1 Inter,sans-serif;border:1px solid #ddd;padding:12px 18px;border-radius:30px;text-decoration:none}}
 @media(max-width:809px){nav [data-framer-name="Control"]{width:auto!important;flex:none!important}.sb-mobile-cta{white-space:nowrap;flex:none}}
-#how,#setup,#solution{scroll-margin-top:90px}
+#how,#solution{scroll-margin-top:90px}
 
 /* The original rotating example cards, with keyboard-accessible controls. */
 .sb-feat .it button {
@@ -511,9 +495,12 @@ a:focus-visible{outline:3px solid #168b54!important;outline-offset:5px!important
 }
 .sb-feat .it button:focus-visible{outline:2px solid #168b54;outline-offset:4px}
 .sb-feat .it h4 i{flex:0 0 24px}
+.sb-feat .mock{grid-template-columns:minmax(0,1fr)}
 .sb-feat .mock .v{box-sizing:border-box;max-width:100%}
 .sb-feat .v-bd .r>div{min-width:0}
 .sb-feat .v-bd .r em{flex:none}
+.sb-feat .v-sheet .rw{gap:8px;align-items:baseline}
+.sb-feat .v-sheet .rw span:last-child{white-space:nowrap}
 @media(max-width:700px){
   .sb-feat .v-bd .r{gap:6px;padding-inline:10px}
   .sb-feat .v-bd em{padding-inline:6px}

@@ -5,15 +5,15 @@ function feature() {
   const workflows = [
     {
       title: 'Find sales opportunities',
-      description: 'Turn a manufacturer’s product announcement into a reason to reach out. Find the right purchasing or packaging contact and prepare an Outlook draft for your rep to review.',
+      description: 'Turn a manufacturer’s product launch into a reason to reach out. Find the buyer and prepare an Outlook draft your rep can edit and send.',
       icon: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
       visual: `
         <div class="v v-bd">
-          <div class="top"><div class="from">Example workflow</div><div class="subj">From product launch to Outlook draft</div></div>
+          <div class="top"><div class="from">Outbound prospecting</div><div class="subj">Alder Ridge Tools</div></div>
           <div class="rows">
-            <div class="r"><div><b>Manufacturer launches a new line</b><span>New products may need new packaging</span></div><em class="o">Signal</em></div>
-            <div class="r"><div><b>Packaging buyer</b><span>Purchasing contact for the new line</span></div><em class="b">Contact</em></div>
-            <div class="r"><div><b>Outlook draft</b><span>“Are you reviewing packaging options for the launch?”</span></div><em class="g">Review</em></div>
+            <div class="r"><div><b>New 18V compact impact driver</b><span>Product announcement</span></div><em class="o">Launch</em></div>
+            <div class="r"><div><b>Nina Patel</b><span>Packaging Buyer</span></div><em class="b">Contact</em></div>
+            <div class="r"><div><b>Outlook draft</b><span>Hi Nina, are you still sourcing corrugated inserts for the new 18V driver? I can send two die-cut options.</span></div><em class="g">Review</em></div>
           </div>
         </div>`,
     },
@@ -23,9 +23,9 @@ function feature() {
       icon: '<path d="M4 5h16v11H9l-5 4V5zM8 9h8m-8 3h5"/>',
       visual: `
         <div class="v v-wa">
-          <div class="hd"><span class="av">${CL('#075E54', 18)}</span>Example · Trade-show follow-up</div>
-          <div class="msg me">Booth notes: needs a protective insert. Promised sample options Friday.</div>
-          <div class="msg so"><b>Email draft</b>Good meeting you at the show. Is Friday still a good time to look at insert samples?</div>
+          <div class="hd"><span class="av">${CL('#075E54', 18)}</span>Morgan Lee · PACK EXPO</div>
+          <div class="msg me">Harborline Equipment: regulator moves in the carton. Promised two insert options by Friday.</div>
+          <div class="msg so"><b>Email draft</b>Hi Morgan, good meeting you at PACK EXPO. Can you send the carton dimensions? I’ll get two insert options over by Friday.</div>
           <div class="acts"><span class="go">Review draft</span><span>Edit</span></div>
         </div>`,
     },
@@ -35,12 +35,12 @@ function feature() {
       icon: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16"/>',
       visual: `
         <div class="v v-sheet">
-          <div class="req"><span class="who">Customer request</span> 5,000 cartons</div>
+          <div class="req"><span class="who">Harborline Equipment</span> 5,000 die-cut inserts</div>
           <div class="sheet">
-            <div class="hd"><span>Supplier replies</span><span>Example quotes</span></div>
-            <div class="rw"><span>Supplier A · 10 days</span><span>$0.38/unit</span></div>
-            <div class="rw hit"><span>Supplier B · 5 days</span><span>$0.43/unit</span></div>
-            <div class="rw"><span>Supplier C · 7 days</span><span>$0.41/unit</span></div>
+            <div class="hd"><span>Supplier bids</span><span>Business days</span></div>
+            <div class="rw"><span>Redwood Carton · 10 days</span><span>$0.38/unit</span></div>
+            <div class="rw hit"><span>Ridgeway Packaging · 5 days</span><span>$0.43/unit</span></div>
+            <div class="rw"><span>Pioneer Corrugated · 7 days</span><span>$0.41/unit</span></div>
           </div>
         </div>`,
     },
@@ -50,12 +50,12 @@ function feature() {
       icon: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
       visual: `
         <div class="v v-call">
-          <div class="who"><div class="av">CR</div><b>Existing customer</b><small>Example · Call prep</small></div>
+          <div class="who"><div class="av">DB</div><b>Dana Brooks · Crestview Motion</b><small>Purchasing · Call prep</small></div>
           <div class="wave" aria-hidden="true">${'<i></i>'.repeat(13)}</div>
           <div class="lines">
-            <div class="ln b">Last conversation: customer asked about shorter lead times.</div>
-            <div class="ln s">Open item: cartons for the next run.</div>
-            <div class="ln b">Ask when the next shipment needs to arrive.</div>
+            <div class="ln b">Line two starts Monday. Dana needs 200 double-wall cartons before then.</div>
+            <div class="ln s">Last order: 18 × 14 × 12 in. cartons.</div>
+            <div class="ln b">Confirm size and check Thursday delivery.</div>
           </div>
         </div>`,
     },
@@ -63,7 +63,7 @@ function feature() {
 
   const section = el(`
     <div id="sb-feat" class="sb-feat">
-      <div class="head"><h2>Put AI to work on the everyday.</h2><p>Examples of workflows we can build for your sales team.</p></div>
+      <div class="head"><h2>Put AI to work on the everyday.</h2><p>See how your reps could act on buyer news, follow up after a show, and compare supplier quotes.</p></div>
       <div class="grid">
         <div class="stage">
           ${workflows.map(({visual}, i) => `<div id="sb-feature-${i}" class="mock">${visual}</div>`).join('')}
