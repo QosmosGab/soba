@@ -5,7 +5,7 @@
 
 ## Marketing site
 
-The site retains its existing static Framer layout. Edit the copy and layout overrides in `docs/preview/src/overlay.py`, `soba.js`, and `soba.css`. The use-case cards and illustrative workflow are in `use-cases.html` and `workflow.html`.
+The site retains its existing static Framer layout. Edit the copy and layout overrides in `docs/preview/src/overlay.py`, `soba.js`, and `soba.css`. The animated homepage sections are in `features.js`, `stack.js`, and `outcomes.js`.
 
 Build the published HTML:
 

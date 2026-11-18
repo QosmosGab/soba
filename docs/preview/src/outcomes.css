@@ -1,0 +1,21 @@
+.sb-rows .labels a{color:#666;text-decoration:none}
+.sb-rows .labels a:focus-visible{outline:2px solid #167A47;outline-offset:4px}
+.sb-row{min-width:0;scroll-margin-top:110px}
+.sb-row .gfx{min-width:0}
+.sb-row .g-pricewrap{width:100%;max-width:380px}
+.sb-row .g-price{width:100%;box-sizing:border-box}
+.sb-row .g-price .row + .row{border-top:1px dashed #e4e4e4}
+.sb-quote-title{font-size:12px;color:#666}
+.sb-quote-selection{font-size:13px;text-align:center}
+.sb-row .g-stack{width:min(380px,100%)}
+.sb-row .g-stack .c{max-width:100%;box-sizing:border-box}
+.sb-row .g-stack .c b{gap:8px}
+.sb-row .g-desk .list div em{white-space:normal;text-align:right}
+@media(max-width:700px){
+  .sb-row .g-pricewrap,.sb-row .g-desk,.sb-row .g-stack{width:calc(100% - 40px)}
+  .sb-row .g-desk .list div span{overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){
+  .sb-row .g-profit{opacity:1;transform:none}
+  .sb-row .g-price .num.win ellipse{stroke-dashoffset:0}
+}

@@ -74,24 +74,27 @@ CONTACT_MAP = [
 ]
 
 MAP = [
- ("Product", "What we build"), ("Pricing", "How we work"), ("Integration", "How we work"),
+ ("Product", "What we build"), ("Pricing", "How we work"), ("Integration", "Outcomes"),
  ("Resources", "Company"), ("Get started", "Talk to us"),
  ("New Release Available", "AI for distributors"),
  ("Scale faster with your AI Agent", "More time selling. Less time on busywork."),
  ("Spend less time on logistics and more on strategy while Nexura handles the execution of your global marketing operations.",
   "We build practical AI tools that help your team find sales opportunities, follow up with customers, and put quotes together. Built around the way you already work."),
  ("Start for free", "Talk to us"), ("Talk to sales", "See examples"),
- ("Connects with your existing stack.", "Built around how you work."),
+ ("Connects with your existing stack.", "Works with what you already use."),
  ("Nexura plugs into the tools your team already uses — no migration required.",
-  "Start with one task your team already does. We build a first version around your emails, spreadsheets, and systems."),
+  "Your reps already work in email, spreadsheets, docs, and a CRM. We build the first version around the tools you use."),
  ("Explore 50+ supported integrations", "Show us one repetitive task"),
  ("Securely link your account", "We build the first version free"),
  ("Sync and streamline your workflow", "Your team tries it and shapes what comes next"),
  ("Explore all integrations", "Talk to us"),
+ ("Built for every marketing team.", "More sales. Less chasing."),
+ ("Whether you're a solo marketer or a full-service agency, Nexura adapts to the way you work.",
+  "Find better opportunities and keep deals moving."),
  ("Your best-performing campaign starts here.", "Start with one workflow."),
  ("Set up in minutes. See results from day one.", "Show us where your team gets bogged down. We’ll build the first version free."),
  ("The AI agent built for modern marketing teams.", "Practical AI for distributors."),
- ("Platform", "Soba"), ("Demo", "Talk to us"), ("Blog", "What we build"), ("Solutions", "How we work"),
+ ("Platform", "Soba"), ("Demo", "Talk to us"), ("Blog", "What we build"), ("Solutions", "Outcomes"),
  ("Terms of Services", "Terms"), ("Privacy Policy", "Privacy"),
  ("Designed by Lunis. All rights reserved.", "© 2026 Project Peach Inc., doing business as Soba AI"),
  ("Nexura", "soba"),
@@ -204,8 +207,8 @@ while True:
     pos = i + 10
 print("cta buttons retitled:", kc)
 style += '<style id="soba-css">' + (ROOT/'soba.css').read_text() + '</style>'
-style += '<template id="sb-use-cases-template">' + (ROOT/'use-cases.html').read_text() + '</template>'
-style += '<template id="sb-workflow-template">' + (ROOT/'workflow.html').read_text() + '</template>'
+if PAGE == 'home':
+    style += '<style id="soba-outcomes-css">' + (ROOT/'outcomes.css').read_text() + '</style>'
 if LEGAL:
     style += '<style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style>'
     style += '<template id="sb-legal-src">' + LEGAL_HTML + '</template>'
@@ -218,6 +221,9 @@ style += '<script defer src="/_vercel/insights/script.js"></script>'
 h = h.replace('</head>', style + '</head>', 1)
 script = '<script id="soba-page">window.SB_PAGE=%s;window.SB_TITLE=%s;</script>' % (json.dumps(PAGE), json.dumps(TITLE)) + script
 script += '<script id="soba-js">' + (ROOT/'soba.js').read_text() + '</script>'
+if PAGE == 'home':
+    sections = '\n'.join((ROOT/name).read_text() for name in ('features.js', 'stack.js', 'outcomes.js'))
+    script = script.replace('/* HOME_SECTIONS */', sections)
 h = h.replace('</body>', script + '</body>', 1)
 # hero illustration -> our farmland image
 PAT={'9c47fOR3CNoSsEtr6IEYJoKM':'pattern-grid.svg','8Li3bEi2pBFSRCKmHpW1kYBntrg':'pattern-dots.svg','wGAHOWhVswEtWkOKTJN6s2CW0':'pattern-dots.svg'}
@@ -292,7 +298,7 @@ def within(node, name):
         if p['attrs'].get('data-framer-name') == name: return True
         p = p.get('parent')
     return False
-remove_names = {'Demo Section', 'Logo Section', 'Solutions Section', 'Testimonial Section', 'Pricing Section'}
+remove_names = {'Demo Section', 'Logo Section', 'Testimonial Section', 'Pricing Section'}
 if PAGE == 'contact': remove_names |= {'Info Section', 'FAQ Section'}
 edits = []
 for node in layout.nodes:
@@ -301,9 +307,9 @@ for node in layout.nodes:
     if name in remove_names and not any(within(node,n) for n in remove_names):
         edits.append((node['start'], node['end'], ''))
     elif PAGE == 'home' and name == 'Container' and within(node, 'Feature Section'):
-        edits.append((node['inner'], node['close'], (ROOT/'use-cases.html').read_text()))
+        edits.append((node['inner'], node['close'], ''))
     elif PAGE == 'home' and name == 'Canvas' and within(node, 'Integration Section'):
-        edits.append((node['inner'], node['close'], (ROOT/'workflow.html').read_text()))
+        edits.append((node['inner'], node['close'], ''))
     elif PAGE == 'home' and node['tag'] == 'h1' and within(node, 'Hero'):
         edits.append((node['inner'], node['close'], '<span data-soba-heading>More time selling.</span> <span data-soba-heading>Less time on busywork.</span>'))
 for start, end, replacement in sorted(edits, reverse=True): h = h[:start] + replacement + h[end:]
