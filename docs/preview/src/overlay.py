@@ -15,6 +15,11 @@ OUT = {'home': 'v1.html', 'contact': 'contact.html'}.get(PAGE, PAGE + '.html')
 SITE = ROOT.parent.parent  # docs/
 DEPLOY = SITE/('index.html' if PAGE == 'home' else OUT)
 h = (ROOT/SRC).read_text(encoding="utf-8")
+# The published shell is static HTML. Its original app bundle restores the
+# template content and can unmount edited sections when a breakpoint changes.
+# Keep its layout CSS and appearance effects; use our small layer for behavior.
+h = re.sub(r'<script\b[^>]*data-framer-bundle="main"[^>]*>.*?</script>', '', h, flags=re.S)
+h = re.sub(r'<link\b[^>]*rel="modulepreload"[^>]*>', '', h)
 LEGAL_HTML = LEGAL_H1 = LEGAL_DATE = LEGAL_DESC = None
 if PAGE == '404':
     LEGAL_DESC = 'That page moved or never existed.'
@@ -29,8 +34,8 @@ elif LEGAL:
     body = lsrc[lsrc.find('</p>', lsrc.find('<p class="muted">')) + 4:]
     body = body[:body.rfind('</main>')] if '</main>' in body else body
     LEGAL_HTML = body.strip()
-TITLE = {'home': 'Soba - AI solutions for produce companies', 'contact': 'Contact - Soba', '404': 'Page not found - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
-OGTITLE = {'home': 'Soba. AI for the produce business', 'contact': 'Contact Soba'}.get(PAGE, TITLE)
+TITLE = {'home': 'Soba — Practical AI for distributors', 'contact': 'Contact - Soba', '404': 'Page not found - Soba'}.get(PAGE, (LEGAL_H1 or '') + ' - Soba')
+OGTITLE = {'home': 'Soba — More time selling. Less time on busywork.', 'contact': 'Contact Soba'}.get(PAGE, TITLE)
 CANON = 'https://usesoba.com/' + ('' if PAGE == 'home' else PAGE)
 
 CONTACT_MAP = [
@@ -69,76 +74,26 @@ CONTACT_MAP = [
 ]
 
 MAP = [
- # nav
- ("Product", "What we build"), ("Pricing", "How we work"), ("Integration", "Outcomes"), ("Resources", "Company"), ("Get started", "Book a demo"),
- # hero
- ("New Release Available", "AI for produce companies"),
- ("Scale faster with your AI Agent", "AI built for the produce business."),
+ ("Product", "What we build"), ("Pricing", "How we work"), ("Integration", "How we work"),
+ ("Resources", "Company"), ("Get started", "Talk to us"),
+ ("New Release Available", "AI for distributors"),
+ ("Scale faster with your AI Agent", "More time selling. Less time on busywork."),
  ("Spend less time on logistics and more on strategy while Nexura handles the execution of your global marketing operations.",
-  "We build AI for sales and operations teams in produce. Lower costs, more revenue, and hours back for your people."),
- ("Start for free", "Book a demo"), ("Talk to sales", "Contact us"),
- ("Aaron", "Ruben"), ("Sarah", "Marisol"),
- # intelligence section
- ("Marketing at full intelligence. Stop guessing, start growing — Nexura analyzes your data and delivers insights that actually move the needle.",
-  "Where AI pays off in produce."),
- ("Conversational AI Agent", "Sales calls and follow-ups"),
- ("Ask Nexura anything about your performance. Get data-backed recommendations instantly.", "Makes and answers sales calls, and follows up on every quote and lead by phone, text and email, in English or Spanish."),
- ("Campaign Tracking", "AI sales assistant"),
- ("Monitor ROI, conversions, and spend across every channel in real time. Spot what's working and cut what isn't.", "Every rep gets an assistant on WhatsApp that pulls prices, stock and account history, and drafts the quote for them."),
- ("Unified Dashboard", "Data entry and tracking"),
- ("See your entire marketing operation from one central view. KPIs, trends, and activity feeds all live in one place.", "Orders from email, text and WhatsApp go into your system on their own, and every order is tracked from entry to invoice."),
- ("Automated Workflow", "Business development"),
- ("Design and deploy multi-step agent journeys. Configure how Nexura thinks, acts, and reports — entirely on your terms.", "Finds new buyers, researches what they buy, and opens the conversation, so reps spend their time on accounts ready to order."),
- # integrations
- ("Connects with your existing stack.", "Works with what you already use."),
- ("Nexura plugs into the tools your team already uses — no migration required.", "Your ERP, email, phones and WhatsApp. No new system for your team."),
- ("Explore 50+ supported integrations", "We find where your team loses the most time"),
- ("Securely link your account", "We build on top of your systems"),
- ("Sync and streamline your workflow", "Your team runs it from WhatsApp and email"),
- ("Explore all integrations", "See how it works"),
- # teams
- ("Built for every marketing team.", "More sales. Less chasing."),
- ("Whether you're a solo marketer or a full-service agency, Nexura adapts to the way you work.", "Lower costs, more revenue, and a team that spends its day selling."),
- ("For marketing team", "For grower-shippers"), ("For startup", "For importers"), ("For agency", "For wholesalers"),
- ("Stop manually pulling reports across platforms.", "Stop finding out about Thursday's loads on Friday."),
- ("Nexura connects to your ad channels and surfaces exactly where your budget is working hardest.", "Soba enters orders from Nogales, Salinas and the Valley and has the cards ready for your team."),
- ("Meta Ads", "Roma 5x6"), ("3 campaigns currently active", "320 cases, Fresh Valley, Thu pickup"),
- ("Google Ads", "Super cucumbers"), ("142 clicks tracked today", "200 cases confirmed at sheet"),
- ("ROI Score", "Price rules"), ("4.2x return this week", "9 of 10 cleared without a rep"),
- ("Budget Alert", "Below rule"), ("15% remaining on Q1 spend", "1 request waiting on a rep"),
- ("Top Channel", "Top buyer"), ("Paid search leading conversions", "Fresh Valley, 4 orders this week"),
- ("Do more with a lean marketing team.", "Do more with a lean sales desk."),
- ("Set your workflows once and let Nexura run your campaigns continuously in the background.", "Set your rules once and let Soba handle the busywork."),
- ("Data Intake", "Buyer call"), ("Input", "Order"), ("Report", "Confirmation"), ("Output", "Order card"),
- ("Manage every client from one intelligent platform.", "Manage every buyer from one desk."),
- ("Deliver AI-powered recommendations and scheduled reports without the manual overhead.", "Written confirmations and a morning summary, without the manual overhead."),
- ("Ads Channels", "Orders"), ("Conversion Trend", "Orders this week"),
- # testimonials
- ("Loved by teams worldwide.", "What the desks are saying."),
- ("From lean startups to global agencies, here's what our users have to say.", "Grower-shippers, importers and wholesalers running Soba on their line."),
- ("\"Nexura cut our reporting time in half. We now spend that time actually optimizing campaigns instead.\"", "\"We used to find out about the Thursday loads on Friday morning. Now the order card is sitting there when I walk in.\""),
- ("Sarah Chen, Head of Growth at Codecraft", "Ruben P., Senior sales rep, Nogales AZ"),
- ("\"Nexura flagged three underperforming campaigns in seconds. That insight alone made it a no-brainer.\"", "\"Half our buyers text in Spanish at ten at night. Soba answers them in Spanish and only pings me if the price is off.\""),
- ("Emma Hartley, Marketing Lead at Acme", "Marisol G., Sales manager, McAllen TX"),
- ("\"Switching to Nexura was the easiest decision we made this quarter. Our ROAS improved by 30% in the first month alone.\"", "\"I was worried it would promise prices. It never has. It either hits our sheet or it sends me the card.\""),
- ("Claire Donovan, Marketing Lead at LaunchSimple", "Dave K., Owner, wholesaler, Salinas CA"),
- ("\"We manage 12 client accounts and Nexura keeps everything in one place. It's like an extra team member.\"", "\"A buyer called at 1 a.m. for 200 cases of super cucumbers. Soba took it, read it back, and the card was in my email at 6:45.\""),
- ("James Walker, Founder at PictelAI", "Luis A., Importer, Pharr TX"),
- # pricing
- ("Start free and scale as your team grows. No hidden fees, no surprises.", "One desk, one price per line. No setup fee, no contract."),
- ("Starter", "Pilot"), ("Forever", "First 30 nights"), ("For solo marketers getting started", "For one desk trying it on real orders"),
- ("1 active campaign", "1 company line"), ("Basic performance dashboard", "English and Spanish"), ("50 AI tokens per month", "Up to 100 orders"), ("Weekly automated reports", "Morning summary"),
- ("Pro", "Desk"), ("49", "499"), ("36", "399"), ("Continue with Pro", "Start with Desk"), ("For growing teams", "For a desk with one line and on-call reps"),
- ("Unlimited active campaigns", "Unlimited orders"), ("Full analytics dashboard", "Price rules and volume limits"), ("150 AI tokens per month", "Rep cards on WhatsApp"), ("Custom workflow builder", "Call recordings and transcripts"),
- ("Agency", "Multi-desk"), ("149", "1,499"), ("109", "1,199"), ("Continue with Agency", "Talk to us"), ("For agencies managing clients", "For companies with several desks or lines"),
- ("Everything in Pro", "Everything in Desk"), ("Up to 15 client accounts", "Up to 5 lines"), ("Multi-account dashboard", "Shared price sheet across desks"), ("White-label report exports", "Order card export to your system"),
- # cta + footer
- ("Your best-performing campaign starts here.", "Let's build it together."),
- ("Set up in minutes. See results from day one.", "Thirty minutes on a call to find where AI saves your team the most."),
- ("The AI agent built for modern marketing teams.", "AI solutions for the produce supply chain"),
- ("Platform", "Soba"), ("Demo", "Book a demo"), ("Blog", "What we build"), ("Solutions", "Outcomes"),
+  "We build practical AI tools that help your team find sales opportunities, follow up with customers, and put quotes together. Built around the way you already work."),
+ ("Start for free", "Talk to us"), ("Talk to sales", "See examples"),
+ ("Connects with your existing stack.", "Built around how you work."),
+ ("Nexura plugs into the tools your team already uses — no migration required.",
+  "Start with one task your team already does. We build a first version around your emails, spreadsheets, and systems."),
+ ("Explore 50+ supported integrations", "Show us one repetitive task"),
+ ("Securely link your account", "We build the first version free"),
+ ("Sync and streamline your workflow", "Your team tries it and shapes what comes next"),
+ ("Explore all integrations", "Talk to us"),
+ ("Your best-performing campaign starts here.", "Start with one workflow."),
+ ("Set up in minutes. See results from day one.", "Show us where your team gets bogged down. We’ll build the first version free."),
+ ("The AI agent built for modern marketing teams.", "Practical AI for distributors."),
+ ("Platform", "Soba"), ("Demo", "Talk to us"), ("Blog", "What we build"), ("Solutions", "How we work"),
  ("Terms of Services", "Terms"), ("Privacy Policy", "Privacy"),
- ("Designed by Lunis. All rights reserved.", "© 2026 Project Peach Inc., doing business as Soba AI · 575 Fifth Avenue, New York, NY 10017 · (480) 819-8035"),
+ ("Designed by Lunis. All rights reserved.", "© 2026 Project Peach Inc., doing business as Soba AI"),
  ("Nexura", "soba"),
 ]
 if PAGE == 'contact': MAP = CONTACT_MAP + MAP
@@ -249,6 +204,8 @@ while True:
     pos = i + 10
 print("cta buttons retitled:", kc)
 style += '<style id="soba-css">' + (ROOT/'soba.css').read_text() + '</style>'
+style += '<template id="sb-use-cases-template">' + (ROOT/'use-cases.html').read_text() + '</template>'
+style += '<template id="sb-workflow-template">' + (ROOT/'workflow.html').read_text() + '</template>'
 if LEGAL:
     style += '<style id="soba-legal-hide">[data-framer-name="Form Section"],[data-framer-name="Info Section"],[data-framer-name="FAQ Section"]{display:none!important}</style>'
     style += '<template id="sb-legal-src">' + LEGAL_HTML + '</template>'
@@ -265,21 +222,21 @@ h = h.replace('</body>', script + '</body>', 1)
 # hero illustration -> our farmland image
 PAT={'9c47fOR3CNoSsEtr6IEYJoKM':'pattern-grid.svg','8Li3bEi2pBFSRCKmHpW1kYBntrg':'pattern-dots.svg','wGAHOWhVswEtWkOKTJN6s2CW0':'pattern-dots.svg'}
 for pid,pf in PAT.items(): h = re.sub(r'url\(https://framerusercontent\.com/images/'+pid+r'\.svg[^)]*\)', 'url(/img/'+pf+')', h)
-HERO_SS='img/hero-800.webp 800w, img/hero-1200.webp 1200w, img/hero-1600.webp 1600w, img/hero-2400.webp 2400w'
-CTA_SS='img/cta-800.webp 800w, img/cta-1200.webp 1200w, img/cta-1600.webp 1600w, img/cta-2400.webp 2400w'
+HERO_SS='img/distribution-warehouse.webp 2400w'
+CTA_SS=HERO_SS
 SIZES='(max-width: 809.98px) 100vw, (max-width: 1199.98px) calc(100vw - 32px), min(100vw - 40px, 1440px)'
 h = re.sub(r'srcset="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'srcset="%s"' % HERO_SS, h)
-h = re.sub(r'src="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'src="img/hero-1600.webp"', h)
+h = re.sub(r'src="https://framerusercontent\.com/images/epYjC31PopakdO7OcpxMsWS2y0\.png[^"]*"', 'src="img/distribution-warehouse.webp"', h)
 h = re.sub(r'srcset="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'srcset="%s"' % CTA_SS, h)
-h = re.sub(r'src="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'src="img/cta-1600.webp"', h)
+h = re.sub(r'src="https://framerusercontent\.com/images/Pai7r7UdkYU5XAvtSCnRGv7lC8\.png[^"]*"', 'src="img/distribution-warehouse.webp"', h)
 h = re.sub(r'srcset="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'srcset="%s"' % HERO_SS, h)
-h = re.sub(r'src="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'src="img/hero-1600.webp"', h)
+h = re.sub(r'src="https://framerusercontent\.com/images/D8cPRFjF76b1M4tP49rWtqxvWc\.png[^"]*"', 'src="img/distribution-warehouse.webp"', h)
 print("image refs left:", h.count('epYjC31PopakdO7OcpxMsWS2y0'), h.count('Pai7r7UdkYU5XAvtSCnRGv7lC8'))
 h = re.sub(r'<title>.*?</title>', '<title>%s</title>' % TITLE, h, count=1)
 
-h = re.sub(r'mailto:\s*hello@nexura\.ai', 'mailto:hello@usesoba.com', h); h = re.sub(r'href="https://contra\.com/[^"]*"', 'href="/"', h).replace('tel:+18001234567', 'tel:+14808198035').replace('tel: 8001234567', 'sms:+14808198035')
+h = re.sub(r'mailto:\s*hello@nexura\.ai', 'mailto:trustin@usesoba.com', h); h = re.sub(r'href="https://contra\.com/[^"]*"', 'href="/"', h).replace('tel:+18001234567', 'tel:+14808198035').replace('tel: 8001234567', 'sms:+14808198035')
 # head: Soba metadata instead of the template's
-DESC = LEGAL_DESC or "We build AI for sales and operations teams in produce. Lower costs, more revenue, and hours back for your people."
+DESC = LEGAL_DESC or "Soba builds practical AI tools for distributors. Find sales opportunities, follow up with customers, and compare supplier quotes."
 h = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="%s"><link rel="icon" href="/favicon.svg" type="image/svg+xml">' % CANON, h)
 h = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="%s">' % CANON, h)
 h = re.sub(r'<meta name="description" content="[^"]*">', '<meta name="description" content="%s">' % DESC, h)
@@ -292,15 +249,65 @@ h = re.sub(r'<meta property="og:image" content="[^"]*">', '<meta property="og:im
 h = re.sub(r'<meta name="twitter:image" content="[^"]*">', '<meta name="twitter:image" content="https://usesoba.com/img/og.jpg">', h)
 print("template refs left in head:", h[:h.find('</head>')].count('nexura'))
 # booking buttons carry the Soba link in the HTML itself, not only after soba.js runs
-CAL = 'https://calendar.app.google/pWPid79eAXuna1nh8'
+CAL = 'mailto:trustin@usesoba.com?subject=A%20workflow%20for%20our%20team'
 def _bake_cal(m):
     tag, inner = m.group(1), m.group(2)
     text = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', inner)).strip()
-    if text in ('Book a demo', 'Pick a time'):
+    if text in ('Talk to us', 'Talk to usTalk to us', 'Talk to us Talk to us', 'Pick a time'):
         tag = re.sub(r'href="[^"]*"', 'href="%s"' % CAL, tag) if 'href="' in tag else tag.replace('<a ', '<a href="%s" ' % CAL, 1)
     return tag + inner + '</a>'
 h = re.sub(r'(<a\b[^>]*>)(.*?)</a>', _bake_cal, h, flags=re.S)
 print("booking links baked:", h.count('href="%s"' % CAL))
+
+# Keep the existing Framer layout, but bake the new content into the initial HTML
+# as well as the runtime layer. This also removes unused legacy claims from HTML.
+from html.parser import HTMLParser
+class LayoutParser(HTMLParser):
+    def __init__(self, source):
+        super().__init__(convert_charrefs=False)
+        self.nodes, self.stack = [], []
+        self.lines = [0]
+        for line in source.splitlines(keepends=True): self.lines.append(self.lines[-1] + len(line))
+        self.feed(source)
+    def source_offset(self):
+        line, col = self.getpos()
+        return self.lines[line - 1] + col
+    def handle_starttag(self, tag, attrs):
+        node = dict(tag=tag, attrs=dict(attrs), start=self.source_offset(), inner=self.source_offset()+len(self.get_starttag_text()), parent=self.stack[-1] if self.stack else None)
+        self.nodes.append(node)
+        if tag not in {'area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'}: self.stack.append(node)
+    def handle_startendtag(self, tag, attrs): pass
+    def handle_endtag(self, tag):
+        for i in range(len(self.stack)-1, -1, -1):
+            if self.stack[i]['tag'] == tag:
+                node = self.stack[i]
+                node.update(close=self.source_offset(), end=self.source_offset()+len(tag)+3)
+                del self.stack[i:]
+                break
+
+layout = LayoutParser(h)
+def within(node, name):
+    p = node.get('parent')
+    while p:
+        if p['attrs'].get('data-framer-name') == name: return True
+        p = p.get('parent')
+    return False
+remove_names = {'Demo Section', 'Logo Section', 'Solutions Section', 'Testimonial Section', 'Pricing Section'}
+if PAGE == 'contact': remove_names |= {'Info Section', 'FAQ Section'}
+edits = []
+for node in layout.nodes:
+    if 'end' not in node: continue
+    name = node['attrs'].get('data-framer-name')
+    if name in remove_names and not any(within(node,n) for n in remove_names):
+        edits.append((node['start'], node['end'], ''))
+    elif PAGE == 'home' and name == 'Container' and within(node, 'Feature Section'):
+        edits.append((node['inner'], node['close'], (ROOT/'use-cases.html').read_text()))
+    elif PAGE == 'home' and name == 'Canvas' and within(node, 'Integration Section'):
+        edits.append((node['inner'], node['close'], (ROOT/'workflow.html').read_text()))
+    elif PAGE == 'home' and node['tag'] == 'h1' and within(node, 'Hero'):
+        edits.append((node['inner'], node['close'], '<span data-soba-heading>More time selling.</span> <span data-soba-heading>Less time on busywork.</span>'))
+for start, end, replacement in sorted(edits, reverse=True): h = h[:start] + replacement + h[end:]
+h = h.replace('alt="Tranquil Rural Scene"', 'alt="Boxed inventory in a distribution warehouse"')
 (ROOT.parent/OUT).write_text(h, encoding="utf-8")
 shutil.copyfile(ROOT.parent/OUT, DEPLOY); print("deployed to", DEPLOY.name)
 print("bytes:", len(h))
