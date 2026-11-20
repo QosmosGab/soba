@@ -1,7 +1,6 @@
 # Soba
 
 - `docs/` — marketing site at usesoba.com, served by the existing Vercel `soba-site` project (root directory: `docs`).
-- `app/` — separate application; not part of the homepage preview.
 
 ## Marketing site
 
