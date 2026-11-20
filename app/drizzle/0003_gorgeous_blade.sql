@@ -1,1 +1,0 @@
-ALTER TABLE "decisions" ADD COLUMN "executedAt" timestamp with time zone;
